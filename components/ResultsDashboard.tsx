@@ -2,6 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import VideoCreator from './VideoCreator';
+import BusinessCardGenerator from './BusinessCardGenerator';
+import CaptionOptimizer from './CaptionOptimizer';
+import HashtagPack from './HashtagPack';
 
 type GeneratedData = {
   whatsapp: string[];
@@ -32,9 +36,9 @@ type ResultPayload = {
   };
 };
 
-type Tab = 'WhatsApp' | 'Instagram' | 'Facebook' | 'Google' | 'Flyer';
+type Tab = 'WhatsApp' | 'Instagram' | 'Facebook' | 'Google' | 'Flyer' | 'Video' | 'Card' | 'Optimize';
 
-const TABS: Tab[] = ['WhatsApp', 'Instagram', 'Facebook', 'Google', 'Flyer'];
+const TABS: Tab[] = ['WhatsApp', 'Instagram', 'Facebook', 'Google', 'Flyer', 'Video', 'Card', 'Optimize'];
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -461,6 +465,9 @@ export default function ResultsDashboard() {
     Facebook: '👥',
     Google: '🔍',
     Flyer: '📄',
+    Video: '🎬',
+    Card: '🪪',
+    Optimize: '🧠',
   };
 
   const renderContent = () => {
@@ -501,6 +508,7 @@ export default function ResultsDashboard() {
                 </div>
               </div>
             ))}
+            <HashtagPack businessType={business.businessType} businessName={business.businessName} language={business.language} />
           </div>
         );
       case 'Facebook':
@@ -902,6 +910,26 @@ export default function ResultsDashboard() {
           </div>
         );
       }
+      case 'Video':
+        return (
+          <VideoCreator
+            business={business}
+            content={{ flyerTagline: data.flyerTagline, flyerHighlight: data.flyerHighlight, whatsapp: data.whatsapp }}
+            plan={plan}
+          />
+        );
+      case 'Card':
+        return (
+          <BusinessCardGenerator business={business} plan={plan} />
+        );
+      case 'Optimize':
+        return (
+          <CaptionOptimizer
+            captions={{ whatsapp: data.whatsapp, instagram: data.instagram, facebook: data.facebook }}
+            business={{ businessName: business.businessName, businessType: business.businessType, language: business.language ?? 'English' }}
+            plan={plan}
+          />
+        );
       default:
         return null;
     }

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import RazorpayButton from './RazorpayButton'
+import FestivalPlanner from '../FestivalPlanner'
 
 type Profile = {
   id: string
@@ -52,6 +53,7 @@ const NAV_ITEMS = [
   { id: 'businesses', label: 'My Businesses', icon: '🏪' },
   { id: 'generations', label: 'Generations', icon: '📝' },
   { id: 'history', label: 'History', icon: '🕐', href: '/history', minPlan: 'starter' },
+  { id: 'schedule', label: 'Schedule', icon: '📅', href: '/schedule', minPlan: 'starter' },
   { id: 'broadcast', label: 'Broadcast', icon: '📣', href: '/broadcast', minPlan: 'growth' },
   { id: 'settings', label: 'Settings', icon: '⚙️' },
 ]
@@ -411,6 +413,16 @@ export default function DashboardClient({ user, profile, businesses, generations
                 </div>
               ))}
             </div>
+          </section>
+        )}
+
+        {/* Festival Planner */}
+        {activeTab === 'overview' && businesses.length > 0 && (
+          <section className="mb-10">
+            <FestivalPlanner
+              businessName={businesses[0].name}
+              businessType={businesses[0].type}
+            />
           </section>
         )}
 
