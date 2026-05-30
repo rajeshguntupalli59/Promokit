@@ -72,7 +72,7 @@ export default function Nav() {
             { label: 'Features', href: '#features' },
             { label: 'Pricing', href: '#pricing' },
             { label: 'Languages', href: '#how-it-works' },
-            { label: 'Blog', href: '#' },
+            { label: '🤖 Market Agent', href: '/market' },
           ].map((link) => (
             <a
               key={link.label}
