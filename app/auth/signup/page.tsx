@@ -18,10 +18,11 @@ export default function SignupPage() {
     setLoading(true)
     setError('')
     const supabase = createClient()
+    const refCode = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('ref') : null
     const { error: err } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: name } },
+      options: { data: { full_name: name, referred_by: refCode ?? undefined } },
     })
     if (err) {
       setError(err.message)

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -12,6 +12,8 @@ type Profile = {
   plan: string
   generations_this_month: number
   billing_period_start: string
+  referral_code?: string
+  referral_credits?: number
   created_at: string
 }
 
@@ -34,6 +36,7 @@ type Generation = {
 }
 
 type User = { id: string; email?: string; user_metadata?: { full_name?: string } }
+type Reminder = { id: string; title: string; date: string; content: string }
 
 interface Props {
   user: User
@@ -48,6 +51,8 @@ const NAV_ITEMS = [
   { id: 'overview', label: 'Overview', icon: '📊' },
   { id: 'businesses', label: 'My Businesses', icon: '🏪' },
   { id: 'generations', label: 'Generations', icon: '📝' },
+  { id: 'history', label: 'History', icon: '🕐', href: '/history' },
+  { id: 'broadcast', label: 'Broadcast', icon: '📣', href: '/broadcast' },
   { id: 'settings', label: 'Settings', icon: '⚙️' },
 ]
 
@@ -80,6 +85,17 @@ export default function DashboardClient({ user, profile, businesses, generations
   const router = useRouter()
   const [activeTab, setActiveTab] = useState('overview')
   const [upgradeSuccess, setUpgradeSuccess] = useState(false)
+  const [reminders, setReminders] = useState<Reminder[]>([])
+  const [referralCopied, setReferralCopied] = useState(false)
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('promokit_reminders') ?? '[]'
+      const all: Reminder[] = JSON.parse(raw)
+      const upcoming = all.filter(r => new Date(r.date) > new Date()).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      setReminders(upcoming)
+    } catch { setReminders([]) }
+  }, [])
 
   const plan = profile?.plan ?? 'free'
   const used = profile?.generations_this_month ?? 0
@@ -132,19 +148,31 @@ export default function DashboardClient({ user, profile, businesses, generations
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
           {NAV_ITEMS.map(item => (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-left transition-all duration-150"
-              style={{
-                background: activeTab === item.id ? 'rgba(255,107,26,0.12)' : 'transparent',
-                color: activeTab === item.id ? '#FF6B1A' : 'rgba(255,255,255,0.55)',
-                border: activeTab === item.id ? '1px solid rgba(255,107,26,0.2)' : '1px solid transparent',
-              }}
-            >
-              <span>{item.icon}</span>
-              {item.label}
-            </button>
+            item.href ? (
+              <Link
+                key={item.id}
+                href={item.href}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-left transition-all duration-150"
+                style={{ color: 'rgba(255,255,255,0.55)', border: '1px solid transparent' }}
+              >
+                <span>{item.icon}</span>
+                {item.label}
+              </Link>
+            ) : (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-left transition-all duration-150"
+                style={{
+                  background: activeTab === item.id ? 'rgba(255,107,26,0.12)' : 'transparent',
+                  color: activeTab === item.id ? '#FF6B1A' : 'rgba(255,255,255,0.55)',
+                  border: activeTab === item.id ? '1px solid rgba(255,107,26,0.2)' : '1px solid transparent',
+                }}
+              >
+                <span>{item.icon}</span>
+                {item.label}
+              </button>
+            )
           ))}
         </nav>
 
@@ -354,6 +382,32 @@ export default function DashboardClient({ user, profile, businesses, generations
           </section>
         )}
 
+        {/* Upcoming Reminders */}
+        {activeTab === 'overview' && reminders.length > 0 && (
+          <section className="mb-10">
+            <h2 className="text-lg font-bold text-white mb-4">⏰ Upcoming Reminders</h2>
+            <div className="space-y-2">
+              {reminders.slice(0, 3).map(r => (
+                <div
+                  key={r.id}
+                  className="flex items-center justify-between px-4 py-3 rounded-xl"
+                  style={{ background: '#111', border: '1px solid rgba(99,102,241,0.2)' }}
+                >
+                  <div>
+                    <p className="text-sm font-semibold text-white">{r.title}</p>
+                    <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                      {new Date(r.date).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                  <span className="text-xs px-2.5 py-1 rounded-lg" style={{ background: 'rgba(99,102,241,0.12)', color: '#818CF8' }}>
+                    Scheduled
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Recent Generations */}
         {(activeTab === 'overview' || activeTab === 'generations') && (
           <section>
@@ -430,6 +484,46 @@ export default function DashboardClient({ user, profile, businesses, generations
                   <p className="text-xs mb-1" style={{ color: 'rgba(255,255,255,0.4)' }}>Plan</p>
                   <PlanBadge plan={plan} />
                 </div>
+              </div>
+            </div>
+
+            {/* Referral */}
+            <div
+              className="rounded-2xl p-6 mb-6"
+              style={{ background: '#111', border: '1px solid rgba(255,215,0,0.15)' }}
+            >
+              <h3 className="font-semibold text-white mb-1">🎁 Refer & Earn</h3>
+              <p className="text-sm mb-4" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                Share your referral link. Each friend who signs up gives you <strong className="text-white/70">3 extra free generations</strong>.
+              </p>
+              {profile?.referral_credits != null && profile.referral_credits > 0 && (
+                <div className="rounded-xl px-4 py-2.5 mb-4 text-sm font-semibold" style={{ background: 'rgba(34,197,94,0.08)', color: '#22C55E', border: '1px solid rgba(34,197,94,0.2)' }}>
+                  ✓ You&apos;ve earned {profile.referral_credits} bonus generation{profile.referral_credits !== 1 ? 's' : ''} from referrals
+                </div>
+              )}
+              <div className="flex gap-2">
+                <input
+                  readOnly
+                  value={typeof window !== 'undefined' ? `${window.location.origin}/auth/signup?ref=${profile?.referral_code ?? ''}` : ''}
+                  className="form-input flex-1 text-xs"
+                  style={{ color: 'rgba(255,255,255,0.5)', cursor: 'text' }}
+                />
+                <button
+                  onClick={async () => {
+                    const url = `${window.location.origin}/auth/signup?ref=${profile?.referral_code ?? ''}`
+                    await navigator.clipboard.writeText(url)
+                    setReferralCopied(true)
+                    setTimeout(() => setReferralCopied(false), 2000)
+                  }}
+                  className="px-4 py-2 rounded-xl text-sm font-bold flex-shrink-0 transition-all"
+                  style={
+                    referralCopied
+                      ? { background: 'rgba(34,197,94,0.15)', color: '#22C55E', border: '1px solid rgba(34,197,94,0.3)' }
+                      : { background: 'rgba(255,215,0,0.1)', color: '#FFD700', border: '1px solid rgba(255,215,0,0.25)' }
+                  }
+                >
+                  {referralCopied ? 'Copied ✓' : 'Copy'}
+                </button>
               </div>
             </div>
 

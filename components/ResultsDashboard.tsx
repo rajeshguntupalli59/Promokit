@@ -86,7 +86,7 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-function MessageCard({ text, index }: { text: string; index: number }) {
+function MessageCard({ text, index, showShare }: { text: string; index: number; showShare?: boolean }) {
   return (
     <div
       className="rounded-xl p-5 group"
@@ -99,11 +99,83 @@ function MessageCard({ text, index }: { text: string; index: number }) {
         >
           Version {index + 1}
         </span>
-        <CopyButton text={text} />
+        <div className="flex items-center gap-2">
+          {showShare && (
+            <a
+              href={`https://wa.me/?text=${encodeURIComponent(text)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200"
+              style={{ background: 'rgba(37,211,102,0.12)', color: '#25D366', border: '1px solid rgba(37,211,102,0.25)' }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+              </svg>
+              Share
+            </a>
+          )}
+          <CopyButton text={text} />
+        </div>
       </div>
       <p className="text-sm text-white/80 leading-relaxed whitespace-pre-wrap">{text}</p>
     </div>
   );
+}
+
+type Reminder = { id: string; title: string; date: string; content: string }
+
+function ReminderModal({ content, onClose }: { content: string; onClose: () => void }) {
+  const [title, setTitle] = useState('')
+  const [date, setDate] = useState('')
+  const [saved, setSaved] = useState(false)
+
+  function save() {
+    if (!date) return
+    const reminders: Reminder[] = JSON.parse(localStorage.getItem('promokit_reminders') ?? '[]')
+    reminders.push({ id: Date.now().toString(), title: title || 'Post reminder', date, content })
+    localStorage.setItem('promokit_reminders', JSON.stringify(reminders))
+    setSaved(true)
+    setTimeout(onClose, 1200)
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center px-4"
+      style={{ background: 'rgba(0,0,0,0.85)' }}
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-sm rounded-2xl p-6"
+        style={{ background: '#141424', border: '1px solid rgba(255,255,255,0.1)' }}
+        onClick={e => e.stopPropagation()}
+      >
+        {saved ? (
+          <div className="text-center py-4">
+            <div className="text-4xl mb-2">✅</div>
+            <p className="font-bold text-white">Reminder saved!</p>
+          </div>
+        ) : (
+          <>
+            <h3 className="font-bold text-white text-base mb-4">⏰ Set Reminder</h3>
+            <div className="space-y-3 mb-4">
+              <div>
+                <label className="form-label">Label (optional)</label>
+                <input className="form-input" placeholder="Post on Instagram" value={title} onChange={e => setTitle(e.target.value)} />
+              </div>
+              <div>
+                <label className="form-label">Remind me on *</label>
+                <input className="form-input" type="datetime-local" value={date} onChange={e => setDate(e.target.value)} min={new Date().toISOString().slice(0,16)} />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={onClose} className="btn-ghost flex-1 py-2.5 rounded-xl text-sm font-semibold">Cancel</button>
+              <button onClick={save} disabled={!date} className="btn-primary flex-[2] py-2.5 rounded-xl text-sm font-bold" style={{ opacity: !date ? 0.5 : 1 }}>Save Reminder</button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
 }
 
 type FlyerTemplate =
@@ -246,6 +318,8 @@ export default function ResultsDashboard() {
   const [flyerTemplate, setFlyerTemplate] = useState<FlyerTemplate>('saffron');
   const [templateCategory, setTemplateCategory] = useState('All');
   const [downloading, setDownloading] = useState(false);
+  const [animated, setAnimated] = useState(false);
+  const [reminderContent, setReminderContent] = useState<string | null>(null);
   const flyerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -259,26 +333,32 @@ export default function ResultsDashboard() {
     }
   }, []);
 
+  function buildPosterParams(extra?: Record<string, string>) {
+    if (!result) return new URLSearchParams();
+    const offerItems = result.business.offerItems?.filter(it => it.name) ?? [];
+    return new URLSearchParams({
+      name: result.business.businessName,
+      type: result.business.businessType,
+      location: result.business.location ?? '',
+      whatsapp: result.business.whatsapp ?? '',
+      tagline: result.data.flyerTagline ?? '',
+      highlight: result.data.flyerHighlight ?? '',
+      template: flyerTemplate,
+      language: result.business.language ?? 'English',
+      offerBadge: result.business.offerEnabled ? (result.business.offerBadge ?? '') : '',
+      offerOccasion: result.business.offerEnabled ? (result.business.offerOccasion ?? '') : '',
+      offerValidTill: result.business.offerEnabled ? (result.business.offerValidTill ?? '') : '',
+      offerItems: result.business.offerEnabled && offerItems.length ? JSON.stringify(offerItems) : '',
+      qr: result.business.whatsapp ? '1' : '',
+      ...extra,
+    });
+  }
+
   const downloadFlyer = async () => {
     if (!result || downloading) return;
     setDownloading(true);
     try {
-      const offerItems = result.business.offerItems?.filter(it => it.name) ?? [];
-      const params = new URLSearchParams({
-        name: result.business.businessName,
-        type: result.business.businessType,
-        location: result.business.location ?? '',
-        whatsapp: result.business.whatsapp ?? '',
-        tagline: result.data.flyerTagline ?? '',
-        highlight: result.data.flyerHighlight ?? '',
-        template: flyerTemplate,
-        language: result.business.language ?? 'English',
-        offerBadge: result.business.offerEnabled ? (result.business.offerBadge ?? '') : '',
-        offerOccasion: result.business.offerEnabled ? (result.business.offerOccasion ?? '') : '',
-        offerValidTill: result.business.offerEnabled ? (result.business.offerValidTill ?? '') : '',
-        offerItems: result.business.offerEnabled && offerItems.length ? JSON.stringify(offerItems) : '',
-      });
-      const res = await fetch(`/api/poster?${params}`);
+      const res = await fetch(`/api/poster?${buildPosterParams()}`);
       if (!res.ok) throw new Error('render failed');
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -288,7 +368,6 @@ export default function ResultsDashboard() {
       link.click();
       URL.revokeObjectURL(url);
     } catch {
-      // fallback: html2canvas on the visible poster card
       if (flyerRef.current) {
         const html2canvas = (await import('html2canvas')).default;
         const canvas = await html2canvas(flyerRef.current, { scale: 3, useCORS: true, backgroundColor: null });
@@ -297,6 +376,31 @@ export default function ResultsDashboard() {
         link.href = canvas.toDataURL('image/png');
         link.click();
       }
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const downloadPdf = async () => {
+    if (!result || downloading) return;
+    setDownloading(true);
+    try {
+      const res = await fetch(`/api/poster?${buildPosterParams()}`);
+      if (!res.ok) throw new Error('render failed');
+      const blob = await res.blob();
+      const dataUrl = await new Promise<string>(resolve => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
+      });
+      const { jsPDF } = await import('jspdf');
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const W = 210, H = W * (1350 / 1080);
+      const top = (297 - H) / 2;
+      pdf.addImage(dataUrl, 'PNG', 0, Math.max(0, top), W, Math.min(H, 297));
+      pdf.save(`${result.business.businessName}-poster.pdf`);
+    } catch {
+      alert('PDF export failed. Try PNG download instead.');
     } finally {
       setDownloading(false);
     }
@@ -333,7 +437,18 @@ export default function ResultsDashboard() {
         return (
           <div className="space-y-4">
             {(data.whatsapp || []).map((msg, i) => (
-              <MessageCard key={i} text={msg} index={i} />
+              <div key={i}>
+                <MessageCard text={msg} index={i} showShare />
+                <div className="flex justify-end mt-1.5">
+                  <button
+                    onClick={() => setReminderContent(msg)}
+                    className="text-xs font-medium px-2.5 py-1 rounded-lg transition-colors"
+                    style={{ color: 'rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.04)' }}
+                  >
+                    ⏰ Schedule
+                  </button>
+                </div>
+              </div>
             ))}
           </div>
         );
@@ -341,7 +456,18 @@ export default function ResultsDashboard() {
         return (
           <div className="space-y-4">
             {(data.instagram || []).map((caption, i) => (
-              <MessageCard key={i} text={caption} index={i} />
+              <div key={i}>
+                <MessageCard text={caption} index={i} />
+                <div className="flex justify-end mt-1.5">
+                  <button
+                    onClick={() => setReminderContent(caption)}
+                    className="text-xs font-medium px-2.5 py-1 rounded-lg transition-colors"
+                    style={{ color: 'rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.04)' }}
+                  >
+                    ⏰ Schedule
+                  </button>
+                </div>
+              </div>
             ))}
           </div>
         );
@@ -451,16 +577,37 @@ export default function ResultsDashboard() {
               })}
             </div>
 
+            {/* Animated toggle */}
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                Preview
+              </span>
+              <button
+                onClick={() => setAnimated(a => !a)}
+                className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all"
+                style={
+                  animated
+                    ? { background: 'rgba(99,102,241,0.15)', color: '#818CF8', border: '1px solid rgba(99,102,241,0.35)' }
+                    : { background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.1)' }
+                }
+              >
+                {animated ? '✨ Animated ON' : '✨ Animate'}
+              </button>
+            </div>
+
             {/* Poster canvas */}
             <div
               ref={flyerRef}
-              className="rounded-3xl overflow-hidden mb-6 relative"
+              className={`rounded-3xl overflow-hidden mb-6 relative${animated ? ' poster-animated' : ''}`}
               style={{
                 background: tpl.bg,
                 border: tpl.border,
                 maxWidth: '440px',
                 margin: '0 auto 24px',
-                boxShadow: `0 8px 60px ${tpl.accent}44, 0 0 0 1px ${tpl.accent}11`,
+                boxShadow: animated
+                  ? `0 8px 80px ${tpl.accent}66, 0 0 40px ${tpl.accent}33`
+                  : `0 8px 60px ${tpl.accent}44, 0 0 0 1px ${tpl.accent}11`,
+                transition: 'box-shadow 0.6s ease',
               }}
             >
               {/* Pattern overlay */}
@@ -653,31 +800,40 @@ export default function ResultsDashboard() {
               </div>
             </div>
 
-            {/* Download + hint */}
+            {/* Download buttons */}
             <div className="flex flex-col items-center gap-3">
-              <button
-                onClick={downloadFlyer}
-                disabled={downloading}
-                className="btn-primary inline-flex items-center gap-2 px-7 py-3.5 rounded-xl font-bold text-sm"
-              >
-                {downloading ? (
-                  <>
+              <div className="flex gap-3">
+                <button
+                  onClick={downloadFlyer}
+                  disabled={downloading}
+                  className="btn-primary inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm"
+                >
+                  {downloading ? (
                     <svg className="animate-spin" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                       <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeOpacity="0.3"/>
                       <path d="M12 3a9 9 0 019 9" strokeLinecap="round"/>
                     </svg>
-                    Preparing…
-                  </>
-                ) : (
-                  <>
+                  ) : (
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                       <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
-                    Download Poster (PNG)
-                  </>
-                )}
-              </button>
-              <p className="text-xs text-white/25">3× resolution · Share directly on WhatsApp & Instagram</p>
+                  )}
+                  {downloading ? 'Preparing…' : 'PNG (3×)'}
+                </button>
+                <button
+                  onClick={downloadPdf}
+                  disabled={downloading}
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all"
+                  style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.8)', border: '1px solid rgba(255,255,255,0.12)' }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" strokeLinecap="round" strokeLinejoin="round"/>
+                    <polyline points="14 2 14 8 20 8" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  PDF
+                </button>
+              </div>
+              <p className="text-xs text-white/25">WhatsApp QR included · Print-ready PDF · Share directly</p>
             </div>
           </div>
         );
@@ -689,6 +845,7 @@ export default function ResultsDashboard() {
 
   return (
     <div className="min-h-screen pt-20 pb-24" style={{ background: '#050508' }}>
+      {reminderContent && <ReminderModal content={reminderContent} onClose={() => setReminderContent(null)} />}
       <div className="max-w-screen-xl mx-auto px-6 lg:px-10">
         {/* Header */}
         <div className="text-center mb-10">

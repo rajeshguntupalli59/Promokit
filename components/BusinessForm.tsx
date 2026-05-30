@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
 type PriceItem = { name: string; price: string; original: string };
@@ -14,12 +14,19 @@ type FormData = {
   language: string;
   tone: string;
   festivals: boolean;
+  logoUrl: string;
   // offer fields
   offerEnabled: boolean;
   offerOccasion: string;
   offerBadge: string;
   offerValidTill: string;
   offerItems: PriceItem[];
+};
+
+type SavedBusiness = {
+  id: string; name: string; type: string; description: string;
+  location: string; whatsapp: string; language: string; tone: string;
+  festivals: boolean; logo_url: string | null;
 };
 
 const OCCASIONS = [
@@ -67,6 +74,10 @@ export default function BusinessForm() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [savedBiz, setSavedBiz] = useState<SavedBusiness[]>([]);
+  const [bizPickerOpen, setBizPickerOpen] = useState(false);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState<FormData>({
     businessName: '',
@@ -77,6 +88,7 @@ export default function BusinessForm() {
     language: 'Hindi',
     tone: 'Friendly & Warm',
     festivals: true,
+    logoUrl: '',
     offerEnabled: false,
     offerOccasion: '',
     offerBadge: '',
@@ -86,6 +98,43 @@ export default function BusinessForm() {
 
   const set = (field: keyof FormData, value: string | boolean | PriceItem[]) =>
     setForm((prev) => ({ ...prev, [field]: value }));
+
+  useEffect(() => {
+    fetch('/api/businesses')
+      .then(r => r.ok ? r.json() : null)
+      .then(json => { if (json?.businesses?.length) setSavedBiz(json.businesses) })
+      .catch(() => {})
+  }, [])
+
+  function loadBusiness(biz: SavedBusiness) {
+    setForm(prev => ({
+      ...prev,
+      businessName: biz.name,
+      businessType: biz.type,
+      description: biz.description,
+      location: biz.location,
+      whatsapp: biz.whatsapp,
+      language: biz.language,
+      tone: biz.tone,
+      festivals: biz.festivals,
+      logoUrl: biz.logo_url ?? '',
+    }))
+    setBizPickerOpen(false)
+  }
+
+  async function uploadLogo(file: File) {
+    setLogoUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/api/logo', { method: 'POST', body: fd })
+      const json = await res.json()
+      if (res.ok) set('logoUrl', json.url)
+      else setError(json.error ?? 'Logo upload failed')
+    } finally {
+      setLogoUploading(false)
+    }
+  }
 
   const setItem = (idx: number, field: keyof PriceItem, val: string) =>
     setForm(prev => {
@@ -180,6 +229,45 @@ export default function BusinessForm() {
               <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                 <span className="text-2xl">📝</span> Business Information
               </h2>
+              {/* Load saved business picker */}
+              {savedBiz.length > 0 && (
+                <div className="mb-5">
+                  <button
+                    type="button"
+                    onClick={() => setBizPickerOpen(o => !o)}
+                    className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all"
+                    style={{ background: 'rgba(99,102,241,0.08)', color: '#818CF8', border: '1px solid rgba(99,102,241,0.2)' }}
+                  >
+                    <span>📂 Load saved business</span>
+                    <span style={{ fontSize: '10px' }}>{bizPickerOpen ? '▲' : '▼'}</span>
+                  </button>
+                  {bizPickerOpen && (
+                    <div className="mt-1 rounded-xl overflow-hidden" style={{ border: '1px solid rgba(99,102,241,0.2)', background: '#0D0D1F' }}>
+                      {savedBiz.map(biz => (
+                        <button
+                          key={biz.id}
+                          type="button"
+                          onClick={() => loadBusiness(biz)}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm transition-colors hover:bg-white/[0.04]"
+                          style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+                        >
+                          <div
+                            className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black flex-shrink-0"
+                            style={{ background: 'rgba(255,107,26,0.15)', color: '#FF6B1A' }}
+                          >
+                            {biz.name[0]?.toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-white">{biz.name}</p>
+                            <p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>{biz.type} · {biz.language}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="space-y-5">
                 <div>
                   <label className="form-label">Business Name *</label>
@@ -235,6 +323,37 @@ export default function BusinessForm() {
                     value={form.whatsapp}
                     onChange={(e) => set('whatsapp', e.target.value)}
                   />
+                </div>
+
+                {/* Logo upload */}
+                <div>
+                  <label className="form-label">Business Logo (optional)</label>
+                  <div className="flex items-center gap-3">
+                    {form.logoUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={form.logoUrl} alt="logo" className="w-12 h-12 rounded-xl object-cover flex-shrink-0" style={{ border: '1px solid rgba(255,255,255,0.15)' }} />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => logoInputRef.current?.click()}
+                      disabled={logoUploading}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all"
+                      style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.65)', border: '1px solid rgba(255,255,255,0.1)', opacity: logoUploading ? 0.6 : 1 }}
+                    >
+                      {logoUploading ? '⏳ Uploading…' : form.logoUrl ? '🔄 Change logo' : '📷 Upload logo'}
+                    </button>
+                    {form.logoUrl && (
+                      <button type="button" onClick={() => set('logoUrl', '')} className="text-white/30 hover:text-red-400 text-lg transition-colors">×</button>
+                    )}
+                  </div>
+                  <input
+                    ref={logoInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                    className="hidden"
+                    onChange={e => { const f = e.target.files?.[0]; if (f) uploadLogo(f) }}
+                  />
+                  <p className="text-xs mt-1.5" style={{ color: 'rgba(255,255,255,0.25)' }}>PNG, JPG, SVG · max 2 MB · Replaces initials on poster</p>
                 </div>
 
                 {/* ── OFFER SECTION ────────────────────────────── */}

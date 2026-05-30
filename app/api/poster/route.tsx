@@ -119,18 +119,37 @@ export async function GET(req: NextRequest) {
     if (raw) offerItems = JSON.parse(raw)
   } catch { offerItems = [] }
   const hasOffer = !!(offerBadge || offerItems.length)
+  const showQr = p.get('qr') === '1' && whatsapp
+  const logoUrl = p.get('logoUrl') || ''
 
   const tpl = TEMPLATES[template] ?? TEMPLATES.saffron
 
   const initials = businessName
     .split(' ').slice(0, 2).map(w => w[0] ?? '').join('').toUpperCase() || 'BZ'
 
-  // Load fonts in parallel
+  // Fetch QR + logo + fonts in parallel
   const fontFamily = LANG_FONT[language]
-  const [poppins700, poppins900, localFont700] = await Promise.all([
+
+  async function fetchBase64(url: string): Promise<string | null> {
+    try {
+      const r = await fetch(url)
+      if (!r.ok) return null
+      const buf = await r.arrayBuffer()
+      const b64 = Buffer.from(buf).toString('base64')
+      const ct = r.headers.get('content-type') ?? 'image/png'
+      return `data:${ct};base64,${b64}`
+    } catch { return null }
+  }
+
+  const waLink = whatsapp ? `https://wa.me/${whatsapp.replace(/\D/g, '')}` : ''
+  const qrApiUrl = showQr ? `${req.nextUrl.origin}/api/qr?url=${encodeURIComponent(waLink)}` : ''
+
+  const [poppins700, poppins900, localFont700, qrData, logoData] = await Promise.all([
     loadGoogleFont('Poppins', 700),
     loadGoogleFont('Poppins', 900),
     fontFamily ? loadGoogleFont(fontFamily, 700) : Promise.resolve(null),
+    qrApiUrl ? fetchBase64(qrApiUrl) : Promise.resolve(null),
+    logoUrl ? fetchBase64(logoUrl) : Promise.resolve(null),
   ])
 
   const fonts: { name: string; data: ArrayBuffer; weight: 100|200|300|400|500|600|700|800|900; style: 'normal'|'italic' }[] = []
@@ -194,7 +213,7 @@ export async function GET(req: NextRequest) {
             display: 'flex',
           }} />
 
-          {/* Logo box with initials */}
+          {/* Logo: uploaded image or initials fallback */}
           <div
             style={{
               display: 'flex',
@@ -203,7 +222,7 @@ export async function GET(req: NextRequest) {
               width: 130,
               height: 130,
               borderRadius: 30,
-              background: 'rgba(255,255,255,0.24)',
+              background: logoData ? 'transparent' : 'rgba(255,255,255,0.24)',
               border: '3px solid rgba(255,255,255,0.5)',
               fontSize: 52,
               fontWeight: 900,
@@ -211,9 +230,13 @@ export async function GET(req: NextRequest) {
               marginBottom: 24,
               letterSpacing: '0.04em',
               boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
+              overflow: 'hidden',
             }}
           >
-            {initials}
+            {logoData
+              // eslint-disable-next-line @next/next/no-img-element
+              ? <img src={logoData} style={{ width: 130, height: 130, objectFit: 'cover' }} alt="" />
+              : initials}
           </div>
 
           {/* Business name */}
@@ -381,32 +404,46 @@ export async function GET(req: NextRequest) {
           <div
             style={{
               display: 'flex',
-              flexDirection: 'column',
+              flexDirection: 'row',
               alignItems: 'center',
+              justifyContent: 'space-between',
               width: '100%',
-              gap: 16,
+              gap: 24,
               padding: '28px 48px',
               borderRadius: 24,
               background: tpl.accentMuted,
               border: `1.5px solid ${tpl.accentBorder}`,
             }}
           >
-            {location && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, flex: 1 }}>
+              {location && (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 14,
+                  fontSize: 24, fontWeight: 700, color: '#fff',
+                }}>
+                  <span>📍</span>
+                  <span>{location}</span>
+                </div>
+              )}
+              {whatsapp && (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 14,
+                  fontSize: 24, fontWeight: 700, color: '#fff',
+                }}>
+                  <span>📲</span>
+                  <span>{whatsapp}</span>
+                </div>
+              )}
+            </div>
+            {qrData && (
               <div style={{
-                display: 'flex', alignItems: 'center', gap: 14,
-                fontSize: 26, fontWeight: 700, color: '#fff',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
               }}>
-                <span>📍</span>
-                <span>{location}</span>
-              </div>
-            )}
-            {whatsapp && (
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 14,
-                fontSize: 26, fontWeight: 700, color: '#fff',
-              }}>
-                <span>📲</span>
-                <span>{whatsapp}</span>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={qrData} style={{ width: 100, height: 100, borderRadius: 12 }} alt="" />
+                <span style={{ fontSize: 13, color: tpl.pillColor, fontWeight: 700, letterSpacing: '0.05em' }}>
+                  Scan to chat
+                </span>
               </div>
             )}
           </div>

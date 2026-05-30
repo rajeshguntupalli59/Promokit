@@ -542,3 +542,20 @@ select.form-input option {
 }
 
 .newsletter-input::placeholder { color: rgba(255,255,255,0.3); }
+
+/* Animated poster */
+@keyframes poster-pulse {
+  0%, 100% { filter: brightness(1) saturate(1); }
+  50% { filter: brightness(1.08) saturate(1.15); }
+}
+@keyframes poster-shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.poster-animated {
+  animation: poster-pulse 2.4s ease-in-out infinite;
+}
+.poster-animated .poster-header {
+  background-size: 200% 100%;
+  animation: poster-shimmer 3s linear infinite;
+}
