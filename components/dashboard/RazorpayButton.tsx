@@ -36,7 +36,12 @@ export default function RazorpayButton({ plan, label, onSuccess }: Props) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ...response, plan }),
           })
-          if (verify.ok) onSuccess?.()
+          if (verify.ok) {
+            onSuccess?.()
+          } else {
+            const err = await verify.json().catch(() => ({}))
+            alert(`Payment recorded but plan activation failed. Please contact support.\nRef: ${response.razorpay_payment_id}\nError: ${err.error ?? 'Unknown'}`)
+          }
         },
         theme: { color: '#FF6B1A' },
       })

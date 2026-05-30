@@ -68,7 +68,12 @@ export default function BusinessForm() {
         body: JSON.stringify(form),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Generation failed');
+      if (!res.ok) {
+        if (json.error === 'limit_reached') {
+          throw new Error('You\'ve used all 3 free generations this month. Upgrade to Starter for unlimited generations.');
+        }
+        throw new Error(json.error || 'Generation failed');
+      }
       localStorage.setItem('promokit_result', JSON.stringify(json));
       router.push('/results');
     } catch (err) {

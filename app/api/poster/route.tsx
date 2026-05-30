@@ -122,7 +122,7 @@ export async function GET(req: NextRequest) {
     fontFamily ? loadGoogleFont(fontFamily, 700) : Promise.resolve(null),
   ])
 
-  const fonts: { name: string; data: ArrayBuffer; weight: number; style: string }[] = []
+  const fonts: { name: string; data: ArrayBuffer; weight: 100|200|300|400|500|600|700|800|900; style: 'normal'|'italic' }[] = []
   if (poppins700) fonts.push({ name: 'Poppins', data: poppins700, weight: 700, style: 'normal' })
   if (poppins900) fonts.push({ name: 'Poppins', data: poppins900, weight: 900, style: 'normal' })
   if (localFont700 && fontFamily) fonts.push({ name: fontFamily, data: localFont700, weight: 700, style: 'normal' })

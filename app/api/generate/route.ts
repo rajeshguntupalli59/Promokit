@@ -21,9 +21,8 @@ export async function POST(req: Request) {
       profile = data
 
       if (profile) {
-        // Reset monthly counter if new billing period
         const now = new Date()
-        const periodStart = new Date(profile.billing_period_start)
+        const periodStart = profile.billing_period_start ? new Date(profile.billing_period_start) : new Date(0)
         if (now.getMonth() !== periodStart.getMonth() || now.getFullYear() !== periodStart.getFullYear()) {
           await supabase.from('profiles').update({
             generations_this_month: 0,
@@ -106,6 +105,10 @@ OUTPUT: Return ONLY valid JSON — no markdown fences, no explanation:
       return Response.json({ error: 'Failed to parse AI response' }, { status: 500 })
     }
     const generated = JSON.parse(jsonMatch[0])
+    const required = ['whatsapp', 'instagram', 'facebook', 'google', 'flyerTagline', 'flyerHighlight']
+    for (const key of required) {
+      if (!(key in generated)) return Response.json({ error: 'Incomplete AI response, please try again' }, { status: 500 })
+    }
 
     // Persist if authenticated
     if (user && profile) {

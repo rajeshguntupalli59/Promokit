@@ -11,7 +11,10 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError] = useState(() => {
+    if (typeof window === 'undefined') return ''
+    return new URLSearchParams(window.location.search).get('error') ?? ''
+  })
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -146,7 +149,7 @@ export default function LoginPage() {
               <div className="flex items-center justify-between mb-2">
                 <label className="form-label" style={{ marginBottom: 0 }}>Password</label>
                 <Link
-                  href="#"
+                  href="/auth/forgot-password"
                   style={{ color: '#FF6B1A', fontSize: '13px', fontWeight: 500 }}
                 >
                   Forgot password?
