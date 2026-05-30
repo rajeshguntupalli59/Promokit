@@ -253,22 +253,38 @@ export default function ResultsDashboard() {
   }, []);
 
   const downloadFlyer = async () => {
-    if (!flyerRef.current || downloading) return;
+    if (!result || downloading) return;
     setDownloading(true);
     try {
-      const html2canvas = (await import('html2canvas')).default;
-      const canvas = await html2canvas(flyerRef.current, {
-        scale: 3,
-        useCORS: true,
-        backgroundColor: null,
-        logging: false,
+      const params = new URLSearchParams({
+        name: result.business.businessName,
+        type: result.business.businessType,
+        location: result.business.location ?? '',
+        whatsapp: result.business.whatsapp ?? '',
+        tagline: result.data.flyerTagline ?? '',
+        highlight: result.data.flyerHighlight ?? '',
+        template: flyerTemplate,
+        language: result.business.language ?? 'English',
       });
+      const res = await fetch(`/api/poster?${params}`);
+      if (!res.ok) throw new Error('render failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.download = `${result?.business.businessName ?? 'PromoKit'}-flyer.png`;
-      link.href = canvas.toDataURL('image/png');
+      link.download = `${result.business.businessName}-poster.png`;
+      link.href = url;
       link.click();
+      URL.revokeObjectURL(url);
     } catch {
-      window.print();
+      // fallback: html2canvas on the visible poster card
+      if (flyerRef.current) {
+        const html2canvas = (await import('html2canvas')).default;
+        const canvas = await html2canvas(flyerRef.current, { scale: 3, useCORS: true, backgroundColor: null });
+        const link = document.createElement('a');
+        link.download = `${result.business.businessName}-poster.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      }
     } finally {
       setDownloading(false);
     }
