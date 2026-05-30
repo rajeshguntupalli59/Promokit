@@ -2,15 +2,22 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
+import { createClient } from '@/lib/supabase/client';
 
 export default function Nav() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => setIsLoggedIn(!!user));
   }, []);
 
   return (
@@ -81,19 +88,30 @@ export default function Nav() {
 
         {/* CTAs */}
         <div className="hidden lg:flex items-center gap-3">
-          <Link
-            href="/create"
-            className="text-sm font-medium transition-colors duration-150 px-4 py-2 rounded-lg"
-            style={{ color: 'rgba(255,255,255,0.55)' }}
-          >
-            Log in
-          </Link>
-          <Link
-            href="/create"
-            className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold rounded-full"
-          >
-            Get Started Free
-          </Link>
+          {isLoggedIn ? (
+            <Link
+              href="/dashboard"
+              className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold rounded-full"
+            >
+              Dashboard →
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/auth/login"
+                className="text-sm font-medium transition-colors duration-150 px-4 py-2 rounded-lg"
+                style={{ color: 'rgba(255,255,255,0.55)' }}
+              >
+                Log in
+              </Link>
+              <Link
+                href="/auth/signup"
+                className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold rounded-full"
+              >
+                Get Started Free
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Mobile menu button */}
@@ -139,13 +157,23 @@ export default function Nav() {
               {l.label}
             </a>
           ))}
-          <Link
-            href="/create"
-            className="btn-primary text-center px-6 py-3.5 text-sm font-bold rounded-full mt-2"
-            onClick={() => setMenuOpen(false)}
-          >
-            Get Started Free →
-          </Link>
+          {isLoggedIn ? (
+            <Link
+              href="/dashboard"
+              className="btn-primary text-center px-6 py-3.5 text-sm font-bold rounded-full mt-2"
+              onClick={() => setMenuOpen(false)}
+            >
+              Dashboard →
+            </Link>
+          ) : (
+            <Link
+              href="/auth/signup"
+              className="btn-primary text-center px-6 py-3.5 text-sm font-bold rounded-full mt-2"
+              onClick={() => setMenuOpen(false)}
+            >
+              Get Started Free →
+            </Link>
+          )}
         </div>
       )}
     </nav>

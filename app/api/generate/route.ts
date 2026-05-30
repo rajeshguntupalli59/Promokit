@@ -1,16 +1,48 @@
-import Anthropic from '@anthropic-ai/sdk';
-import { NextRequest } from 'next/server';
+import Anthropic from '@anthropic-ai/sdk'
+import { createClient } from '@/lib/supabase/server'
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-export async function POST(req: NextRequest) {
+const PLAN_LIMITS: Record<string, number> = {
+  free: 3,
+  starter: 999999,
+  growth: 999999,
+}
+
+export async function POST(req: Request) {
   try {
-    const data = await req.json();
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
 
-    const { businessName, businessType, description, location, whatsapp, language, tone, festivals } = data;
+    let profile = null
+    if (user) {
+      const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+      profile = data
+
+      if (profile) {
+        // Reset monthly counter if new billing period
+        const now = new Date()
+        const periodStart = new Date(profile.billing_period_start)
+        if (now.getMonth() !== periodStart.getMonth() || now.getFullYear() !== periodStart.getFullYear()) {
+          await supabase.from('profiles').update({
+            generations_this_month: 0,
+            billing_period_start: now.toISOString(),
+          }).eq('id', user.id)
+          profile.generations_this_month = 0
+        }
+
+        const limit = PLAN_LIMITS[profile.plan] ?? 3
+        if (profile.generations_this_month >= limit) {
+          return Response.json({ error: 'limit_reached', plan: profile.plan }, { status: 402 })
+        }
+      }
+    }
+
+    const data = await req.json()
+    const { businessName, businessType, description, location, whatsapp, language, tone, festivals } = data
 
     if (!businessName || !businessType || !description) {
-      return Response.json({ error: 'Missing required fields' }, { status: 400 });
+      return Response.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
     const systemPrompt = `You are PromoKit AI, a marketing assistant for Indian small businesses.
@@ -18,7 +50,7 @@ Generate promotional content that feels authentic, local, and compelling.
 Always use the specified language naturally. Include emojis appropriately.
 For Hindi/regional languages, use the actual script (Devanagari for Hindi, Telugu script for Telugu, Tamil script for Tamil, etc).
 Make content feel human, warm, and trustworthy — not like generic corporate marketing.
-Always output ONLY valid JSON — no markdown, no explanation, just the JSON object.`;
+Always output ONLY valid JSON — no markdown, no explanation, just the JSON object.`
 
     const userPrompt = `Generate promotional content for this business:
 Business Name: ${businessName}
@@ -38,7 +70,7 @@ Generate and return valid JSON with this exact structure (no markdown, just JSON
   "google": "google business description (150-200 words, includes keywords, professional)",
   "flyerTagline": "short punchy tagline for flyer (max 8 words)",
   "flyerHighlight": "main offer or highlight for flyer (1 sentence)"
-}`;
+}`
 
     const response = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
@@ -52,22 +84,46 @@ Generate and return valid JSON with this exact structure (no markdown, just JSON
         },
       ],
       messages: [{ role: 'user', content: userPrompt }],
-    });
+    })
 
-    const text = response.content[0].type === 'text' ? response.content[0].text : '';
-
-    // Extract JSON from response
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    const text = response.content[0].type === 'text' ? response.content[0].text : ''
+    const jsonMatch = text.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
-      return Response.json({ error: 'Failed to parse AI response' }, { status: 500 });
+      return Response.json({ error: 'Failed to parse AI response' }, { status: 500 })
+    }
+    const generated = JSON.parse(jsonMatch[0])
+
+    // Persist if authenticated
+    if (user && profile) {
+      const { data: biz } = await supabase.from('businesses').insert({
+        user_id: user.id,
+        name: businessName,
+        type: businessType,
+        description,
+        location: location || '',
+        whatsapp: whatsapp || '',
+        language,
+        tone,
+        festivals: festivals ?? false,
+      }).select().single()
+
+      await Promise.all([
+        supabase.from('generations').insert({
+          user_id: user.id,
+          business_id: biz?.id ?? null,
+          business_name: businessName,
+          content: generated,
+        }),
+        supabase.from('profiles').update({
+          generations_this_month: (profile.generations_this_month || 0) + 1,
+        }).eq('id', user.id),
+      ])
     }
 
-    const generated = JSON.parse(jsonMatch[0]);
-
-    return Response.json({ success: true, data: generated, business: data });
+    return Response.json({ success: true, data: generated, business: data })
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Internal server error';
-    console.error('[PromoKit API Error]', message);
-    return Response.json({ error: message }, { status: 500 });
+    const message = err instanceof Error ? err.message : 'Internal server error'
+    console.error('[PromoKit API Error]', message)
+    return Response.json({ error: message }, { status: 500 })
   }
 }
