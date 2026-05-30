@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 
 type GeneratedData = {
@@ -99,9 +99,68 @@ function MessageCard({ text, index }: { text: string; index: number }) {
   );
 }
 
+type FlyerTemplate = 'saffron' | 'midnight' | 'emerald';
+
+const FLYER_TEMPLATES: Record<FlyerTemplate, {
+  label: string;
+  bg: string;
+  headerBg: string;
+  accent: string;
+  accentMuted: string;
+  border: string;
+  textPrimary: string;
+  textSecondary: string;
+  pillBg: string;
+  pillColor: string;
+  footerBg: string;
+}> = {
+  saffron: {
+    label: '🧡 Saffron Festive',
+    bg: 'linear-gradient(160deg, #1a0800 0%, #2d1000 50%, #1a0800 100%)',
+    headerBg: 'linear-gradient(135deg, #FF6B1A, #FF9500)',
+    accent: '#FF6B1A',
+    accentMuted: 'rgba(255,107,26,0.18)',
+    border: '2px solid rgba(255,107,26,0.5)',
+    textPrimary: '#FFFFFF',
+    textSecondary: 'rgba(255,255,255,0.65)',
+    pillBg: 'rgba(255,107,26,0.22)',
+    pillColor: '#FF9A4A',
+    footerBg: 'rgba(0,0,0,0.3)',
+  },
+  midnight: {
+    label: '💙 Midnight Pro',
+    bg: 'linear-gradient(160deg, #060818 0%, #0D1535 50%, #060818 100%)',
+    headerBg: 'linear-gradient(135deg, #3B5BDB, #6B8CEF)',
+    accent: '#6B8CEF',
+    accentMuted: 'rgba(107,140,239,0.18)',
+    border: '2px solid rgba(107,140,239,0.45)',
+    textPrimary: '#FFFFFF',
+    textSecondary: 'rgba(255,255,255,0.6)',
+    pillBg: 'rgba(107,140,239,0.2)',
+    pillColor: '#A5B8FF',
+    footerBg: 'rgba(0,0,0,0.35)',
+  },
+  emerald: {
+    label: '💚 Emerald Fresh',
+    bg: 'linear-gradient(160deg, #021208 0%, #041E0E 50%, #021208 100%)',
+    headerBg: 'linear-gradient(135deg, #059669, #10B981)',
+    accent: '#10B981',
+    accentMuted: 'rgba(16,185,129,0.18)',
+    border: '2px solid rgba(16,185,129,0.45)',
+    textPrimary: '#FFFFFF',
+    textSecondary: 'rgba(255,255,255,0.6)',
+    pillBg: 'rgba(16,185,129,0.2)',
+    pillColor: '#34D399',
+    footerBg: 'rgba(0,0,0,0.35)',
+  },
+};
+
 export default function ResultsDashboard() {
   const [activeTab, setActiveTab] = useState<Tab>('WhatsApp');
   const [result, setResult] = useState<ResultPayload | null>(null);
+  const [flyerTemplate, setFlyerTemplate] = useState<FlyerTemplate>('saffron');
+  const [downloading, setDownloading] = useState(false);
+  const flyerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem('promokit_result');
@@ -113,6 +172,28 @@ export default function ResultsDashboard() {
       }
     }
   }, []);
+
+  const downloadFlyer = async () => {
+    if (!flyerRef.current || downloading) return;
+    setDownloading(true);
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const canvas = await html2canvas(flyerRef.current, {
+        scale: 3,
+        useCORS: true,
+        backgroundColor: null,
+        logging: false,
+      });
+      const link = document.createElement('a');
+      link.download = `${result?.business.businessName ?? 'PromoKit'}-flyer.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch {
+      window.print();
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   if (!result) {
     return (
@@ -191,82 +272,165 @@ export default function ResultsDashboard() {
             </div>
           </div>
         );
-      case 'Flyer':
+      case 'Flyer': {
+        const tpl = FLYER_TEMPLATES[flyerTemplate];
+        const initials = business.businessName
+          .split(' ')
+          .slice(0, 2)
+          .map((w: string) => w[0])
+          .join('')
+          .toUpperCase();
         return (
           <div>
-            {/* Rendered flyer */}
+            {/* Template picker */}
+            <div className="flex gap-2 mb-6 flex-wrap">
+              {(Object.keys(FLYER_TEMPLATES) as FlyerTemplate[]).map((key) => (
+                <button
+                  key={key}
+                  onClick={() => setFlyerTemplate(key)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-200"
+                  style={
+                    flyerTemplate === key
+                      ? { background: 'rgba(255,107,26,0.2)', color: '#FF6B1A', border: '1px solid rgba(255,107,26,0.5)' }
+                      : { background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.1)' }
+                  }
+                >
+                  {FLYER_TEMPLATES[key].label}
+                </button>
+              ))}
+            </div>
+
+            {/* Poster */}
             <div
-              id="promo-flyer"
-              className="rounded-2xl overflow-hidden mb-6"
+              ref={flyerRef}
+              className="rounded-3xl overflow-hidden mb-6"
               style={{
-                background: 'linear-gradient(145deg, #1a0a00, #130800)',
-                border: '2px solid rgba(255,107,26,0.4)',
-                maxWidth: '480px',
+                background: tpl.bg,
+                border: tpl.border,
+                maxWidth: '440px',
                 margin: '0 auto 24px',
+                boxShadow: `0 0 60px ${tpl.accent}33`,
               }}
             >
+              {/* Colour header band */}
               <div
-                className="p-6 text-center"
-                style={{ borderBottom: '1px solid rgba(255,107,26,0.2)' }}
+                className="relative flex items-center justify-center py-7 px-6"
+                style={{ background: tpl.headerBg }}
               >
-                <div className="text-4xl mb-3">🏪</div>
-                <h2
-                  className="text-2xl font-black text-white mb-1"
-                  style={{ fontFamily: business.language === 'Hindi' || business.language === 'Marathi' ? "'Noto Sans Devanagari', sans-serif" : 'Inter, sans-serif' }}
-                >
-                  {business.businessName}
-                </h2>
-                <p className="text-orange-400 text-sm font-medium">{business.businessType} · {business.location}</p>
+                {/* Decorative circles */}
+                <div
+                  className="absolute top-0 right-0 w-28 h-28 rounded-full opacity-20"
+                  style={{ background: 'rgba(255,255,255,0.3)', transform: 'translate(30%, -30%)' }}
+                />
+                <div
+                  className="absolute bottom-0 left-0 w-20 h-20 rounded-full opacity-15"
+                  style={{ background: 'rgba(255,255,255,0.3)', transform: 'translate(-30%, 30%)' }}
+                />
+                {/* Logo circle */}
+                <div className="relative z-10 flex flex-col items-center gap-3">
+                  <div
+                    className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-black shadow-lg"
+                    style={{ background: 'rgba(255,255,255,0.25)', color: '#fff', border: '2px solid rgba(255,255,255,0.4)' }}
+                  >
+                    {initials}
+                  </div>
+                  <div className="text-center">
+                    <div className="text-white text-lg font-black leading-tight tracking-wide">{business.businessName}</div>
+                    <div className="text-white/80 text-xs font-medium mt-0.5">{business.businessType}</div>
+                  </div>
+                </div>
               </div>
 
-              <div className="p-6 text-center">
+              {/* Body */}
+              <div className="px-7 py-6 text-center">
+                {/* Offer pill */}
                 <div
-                  className="inline-block px-5 py-2 rounded-full text-sm font-bold mb-4"
-                  style={{ background: 'rgba(255,107,26,0.2)', color: '#FF6B1A', border: '1px solid rgba(255,107,26,0.4)' }}
+                  className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold mb-5"
+                  style={{ background: tpl.pillBg, color: tpl.pillColor, border: `1px solid ${tpl.accent}55` }}
                 >
-                  🎉 Special Offer
+                  ✦ SPECIAL OFFER ✦
                 </div>
-                <p className="text-xl font-bold text-white mb-2">{data.flyerTagline || 'Quality products at the best prices!'}</p>
-                <p className="text-white/60 text-sm mb-4">{data.flyerHighlight || 'Visit us today for exclusive deals'}</p>
 
+                {/* Main headline — AI-generated flyerTagline */}
                 <div
-                  className="h-px mb-4"
-                  style={{ background: 'rgba(255,107,26,0.2)' }}
+                  className="text-2xl font-black leading-tight mb-3"
+                  style={{ color: tpl.textPrimary }}
+                >
+                  {data.flyerTagline || 'Quality Products at Best Prices!'}
+                </div>
+
+                {/* Divider */}
+                <div
+                  className="h-px my-4"
+                  style={{ background: `linear-gradient(90deg, transparent, ${tpl.accent}66, transparent)` }}
                 />
 
-                <div className="space-y-2 text-sm">
+                {/* Highlight — AI-generated flyerHighlight */}
+                <p
+                  className="text-sm leading-relaxed mb-5"
+                  style={{ color: tpl.textSecondary }}
+                >
+                  {data.flyerHighlight || 'Visit us today for exclusive deals on all products.'}
+                </p>
+
+                {/* Contact strip */}
+                <div
+                  className="rounded-2xl px-5 py-4 space-y-2"
+                  style={{ background: tpl.accentMuted, border: `1px solid ${tpl.accent}33` }}
+                >
                   {business.location && (
-                    <div className="flex items-center justify-center gap-2 text-white/60">
+                    <div className="flex items-center justify-center gap-2 text-sm font-medium" style={{ color: tpl.textPrimary }}>
                       <span>📍</span> {business.location}
                     </div>
                   )}
                   {business.whatsapp && (
-                    <div className="flex items-center justify-center gap-2 text-white/60">
-                      <span>📞</span> {business.whatsapp}
+                    <div className="flex items-center justify-center gap-2 text-sm font-medium" style={{ color: tpl.textPrimary }}>
+                      <span>📲</span> {business.whatsapp}
                     </div>
                   )}
                 </div>
+              </div>
 
-                <div
-                  className="mt-4 pt-3 text-xs text-white/25"
-                  style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}
-                >
+              {/* Footer */}
+              <div
+                className="px-6 py-3 flex items-center justify-center"
+                style={{ background: tpl.footerBg, borderTop: `1px solid ${tpl.accent}22` }}
+              >
+                <span className="text-xs font-semibold tracking-widest uppercase" style={{ color: tpl.accent, opacity: 0.7 }}>
                   ⚡ Generated by PromoKit AI
-                </div>
+                </span>
               </div>
             </div>
 
-            <div className="text-center">
+            {/* Actions */}
+            <div className="flex flex-col items-center gap-3">
               <button
-                onClick={() => window.print()}
-                className="btn-primary inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold"
+                onClick={downloadFlyer}
+                disabled={downloading}
+                className="btn-primary inline-flex items-center gap-2 px-7 py-3.5 rounded-xl font-bold text-sm"
               >
-                🖨️ Download / Print Flyer
+                {downloading ? (
+                  <>
+                    <svg className="animate-spin" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeOpacity="0.3" />
+                      <path d="M12 3a9 9 0 019 9" strokeLinecap="round" />
+                    </svg>
+                    Preparing…
+                  </>
+                ) : (
+                  <>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    Download Poster (PNG)
+                  </>
+                )}
               </button>
-              <p className="text-xs text-white/30 mt-2">Use Ctrl+P → Save as PDF for best results</p>
+              <p className="text-xs text-white/25">High-resolution · 3× scale · Ready to share on WhatsApp & Instagram</p>
             </div>
           </div>
         );
+      }
       default:
         return null;
     }
