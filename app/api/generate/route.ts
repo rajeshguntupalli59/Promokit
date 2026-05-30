@@ -161,7 +161,19 @@ OUTPUT: Return ONLY valid JSON — no markdown fences, no explanation:
       ])
     }
 
-    return Response.json({ success: true, data: generated, business: data })
+    return Response.json({
+      success: true,
+      data: generated,
+      business: {
+        businessName, businessType, description, location, whatsapp, language, tone,
+        offerEnabled: offerEnabled ?? false,
+        offerOccasion: offerOccasion ?? '',
+        offerBadge: offerBadge ?? '',
+        offerValidTill: offerValidTill ?? '',
+        offerItems: offerItems ?? [],
+        logoUrl: data.logoUrl ?? '',
+      },
+    })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Internal server error'
     console.error('[PromoKit API Error]', message)

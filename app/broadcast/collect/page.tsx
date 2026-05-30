@@ -96,5 +96,5 @@ function CollectForm() {
 }
 
 export default function CollectPage() {
-  return <Suspense><CollectForm /></Suspense>
+  return <Suspense fallback={<div className="min-h-screen" style={{ background: '#000' }} />}><CollectForm /></Suspense>
 }

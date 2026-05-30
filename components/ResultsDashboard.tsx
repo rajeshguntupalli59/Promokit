@@ -23,6 +23,7 @@ type ResultPayload = {
     location: string;
     whatsapp: string;
     language: string;
+    logoUrl?: string;
     offerEnabled?: boolean;
     offerOccasion?: string;
     offerBadge?: string;
@@ -350,6 +351,7 @@ export default function ResultsDashboard() {
       offerValidTill: result.business.offerEnabled ? (result.business.offerValidTill ?? '') : '',
       offerItems: result.business.offerEnabled && offerItems.length ? JSON.stringify(offerItems) : '',
       qr: result.business.whatsapp ? '1' : '',
+      logoUrl: result.business.logoUrl ?? '',
       ...extra,
     });
   }
