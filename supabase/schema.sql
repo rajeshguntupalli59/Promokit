@@ -94,3 +94,21 @@ create policy "Anyone can insert contact" on broadcast_contacts for insert with 
 
 -- Supabase Storage bucket for logos (run in SQL editor or create via Dashboard)
 -- insert into storage.buckets (id, name, public) values ('logos', 'logos', true) on conflict do nothing;
+
+-- Scheduled social media posts
+create table if not exists scheduled_posts (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references profiles(id) on delete cascade not null,
+  platform text not null,
+  content text not null,
+  media_url text,
+  scheduled_at timestamptz not null,
+  status text not null default 'pending',
+  published_at timestamptz,
+  error_message text,
+  platform_post_id text,
+  created_at timestamptz default now()
+);
+alter table scheduled_posts enable row level security;
+create policy "Users can manage own scheduled posts" on scheduled_posts for all using (auth.uid() = user_id);
+create index if not exists scheduled_posts_due_idx on scheduled_posts (status, scheduled_at) where status = 'pending';
