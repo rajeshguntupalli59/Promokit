@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
+import { FRAMEWORKS, TONE_STYLES, LANGUAGE_INSTRUCTIONS, buildSystemPrompt } from '@/lib/copywriting-frameworks'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -45,31 +46,44 @@ export async function POST(req: Request) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const systemPrompt = `You are PromoKit AI, a marketing assistant for Indian small businesses.
-Generate promotional content that feels authentic, local, and compelling.
-Always use the specified language naturally. Include emojis appropriately.
-For Hindi/regional languages, use the actual script (Devanagari for Hindi, Telugu script for Telugu, Tamil script for Tamil, etc).
-Make content feel human, warm, and trustworthy — not like generic corporate marketing.
-Always output ONLY valid JSON — no markdown, no explanation, just the JSON object.`
+    const toneGuide = TONE_STYLES[tone as keyof typeof TONE_STYLES] ?? TONE_STYLES['Friendly & Warm']
+    const langGuide = LANGUAGE_INSTRUCTIONS[language] ?? LANGUAGE_INSTRUCTIONS['English']
 
-    const userPrompt = `Generate promotional content for this business:
-Business Name: ${businessName}
+    const systemPrompt = buildSystemPrompt()
+
+    const userPrompt = `BUSINESS BRIEF:
+Name: ${businessName}
 Type: ${businessType}
 What they sell: ${description}
 Location: ${location || 'India'}
-WhatsApp: ${whatsapp || 'Contact us'}
+WhatsApp/Contact: ${whatsapp || 'Contact us'}
 Language: ${language}
 Tone: ${tone}
-Include festival greetings: ${festivals ? 'Yes' : 'No'}
+Festival greetings: ${festivals ? 'Yes — weave in current Indian festival context naturally' : 'No'}
 
-Generate and return valid JSON with this exact structure (no markdown, just JSON):
+TONE GUIDE: ${toneGuide}
+
+LANGUAGE GUIDE: ${langGuide}
+
+COPYWRITING FRAMEWORKS TO APPLY:
+${FRAMEWORKS.whatsapp}
+
+${FRAMEWORKS.instagram}
+
+${FRAMEWORKS.facebook}
+
+${FRAMEWORKS.flyer}
+
+${FRAMEWORKS.google}
+
+OUTPUT: Return ONLY valid JSON — no markdown fences, no explanation:
 {
-  "whatsapp": ["message1 (2-4 lines, conversational, ends with CTA)", "message2 (offer-focused)", "message3 (festive/seasonal if applicable)"],
-  "instagram": ["caption1 with relevant hashtags", "caption2 with relevant hashtags", "caption3 with relevant hashtags"],
-  "facebook": ["post1 (slightly longer, community-focused)", "post2 (offer or story-focused)"],
-  "google": "google business description (150-200 words, includes keywords, professional)",
-  "flyerTagline": "short punchy tagline for flyer (max 8 words)",
-  "flyerHighlight": "main offer or highlight for flyer (1 sentence)"
+  "whatsapp": ["msg1 using 4U formula", "msg2 using PAS formula", "msg3 using Emotional Connect formula"],
+  "instagram": ["caption1 Hook+Story+CTA with 5-8 hashtags", "caption2 AIDA with hashtags", "caption3 BAB with hashtags"],
+  "facebook": ["post1 PPPP formula", "post2 community story format"],
+  "google": "150-200 word FAB description — professional, no emojis",
+  "flyerTagline": "6-8 word benefit headline",
+  "flyerHighlight": "one FAB sentence with Feature + Advantage + Benefit"
 }`
 
     const response = await client.messages.create({
