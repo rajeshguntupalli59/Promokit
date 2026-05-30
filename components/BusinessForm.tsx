@@ -53,14 +53,15 @@ const BUSINESS_TYPES = [
   'Pharmacy', 'Electronics', 'Bakery', 'Gym', 'Tuition Centre', 'Other',
 ];
 
+// Free: Hindi, Telugu, Tamil, English — Starter: all 7
 const LANGUAGES = [
-  { code: 'Hindi', label: 'हिन्दी', sub: 'Hindi' },
-  { code: 'Telugu', label: 'తెలుగు', sub: 'Telugu' },
-  { code: 'Tamil', label: 'தமிழ்', sub: 'Tamil' },
-  { code: 'Marathi', label: 'मराठी', sub: 'Marathi' },
-  { code: 'Kannada', label: 'ಕನ್ನಡ', sub: 'Kannada' },
-  { code: 'Bengali', label: 'বাংলা', sub: 'Bengali' },
-  { code: 'English', label: 'English', sub: 'English' },
+  { code: 'Hindi', label: 'हिन्दी', sub: 'Hindi', free: true },
+  { code: 'Telugu', label: 'తెలుగు', sub: 'Telugu', free: true },
+  { code: 'Tamil', label: 'தமிழ்', sub: 'Tamil', free: true },
+  { code: 'Marathi', label: 'मराठी', sub: 'Marathi', free: false },
+  { code: 'Kannada', label: 'ಕನ್ನಡ', sub: 'Kannada', free: false },
+  { code: 'Bengali', label: 'বাংলা', sub: 'Bengali', free: false },
+  { code: 'English', label: 'English', sub: 'English', free: true },
 ];
 
 const TONES = [
@@ -77,6 +78,7 @@ export default function BusinessForm() {
   const [savedBiz, setSavedBiz] = useState<SavedBusiness[]>([]);
   const [bizPickerOpen, setBizPickerOpen] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
+  const [userPlan, setUserPlan] = useState<string>('free');
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState<FormData>({
@@ -100,6 +102,8 @@ export default function BusinessForm() {
     setForm((prev) => ({ ...prev, [field]: value }));
 
   useEffect(() => {
+    const plan = localStorage.getItem('promokit_plan') ?? 'free'
+    setUserPlan(plan)
     fetch('/api/businesses')
       .then(r => r.ok ? r.json() : null)
       .then(json => { if (json?.businesses?.length) setSavedBiz(json.businesses) })
@@ -169,6 +173,7 @@ export default function BusinessForm() {
         throw new Error(json.error || 'Generation failed');
       }
       localStorage.setItem('promokit_result', JSON.stringify(json));
+      localStorage.setItem('promokit_plan', json.plan ?? 'free');
       router.push('/results');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
@@ -325,9 +330,16 @@ export default function BusinessForm() {
                   />
                 </div>
 
-                {/* Logo upload */}
+                {/* Logo upload — Growth only */}
                 <div>
-                  <label className="form-label">Business Logo (optional)</label>
+                  <div className="flex items-center gap-2 mb-1">
+                    <label className="form-label" style={{ marginBottom: 0 }}>Business Logo (optional)</label>
+                    {userPlan !== 'growth' && (
+                      <a href="/#pricing" className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'rgba(34,197,94,0.12)', color: '#22C55E', border: '1px solid rgba(34,197,94,0.25)' }}>
+                        Growth
+                      </a>
+                    )}
+                  </div>
                   <div className="flex items-center gap-3">
                     {form.logoUrl && (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -335,12 +347,12 @@ export default function BusinessForm() {
                     )}
                     <button
                       type="button"
-                      onClick={() => logoInputRef.current?.click()}
-                      disabled={logoUploading}
+                      onClick={() => { if (userPlan !== 'growth') return; logoInputRef.current?.click() }}
+                      disabled={logoUploading || userPlan !== 'growth'}
                       className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all"
-                      style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.65)', border: '1px solid rgba(255,255,255,0.1)', opacity: logoUploading ? 0.6 : 1 }}
+                      style={{ background: 'rgba(255,255,255,0.06)', color: userPlan !== 'growth' ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.65)', border: '1px solid rgba(255,255,255,0.1)', opacity: logoUploading ? 0.6 : 1, cursor: userPlan !== 'growth' ? 'not-allowed' : 'pointer' }}
                     >
-                      {logoUploading ? '⏳ Uploading…' : form.logoUrl ? '🔄 Change logo' : '📷 Upload logo'}
+                      {userPlan !== 'growth' ? '🔒 Upload logo (Growth only)' : logoUploading ? '⏳ Uploading…' : form.logoUrl ? '🔄 Change logo' : '📷 Upload logo'}
                     </button>
                     {form.logoUrl && (
                       <button type="button" onClick={() => set('logoUrl', '')} className="text-white/30 hover:text-red-400 text-lg transition-colors">×</button>
@@ -517,33 +529,49 @@ export default function BusinessForm() {
 
               {/* Language */}
               <div className="mb-7">
-                <label className="form-label text-base mb-3">Choose Language *</label>
+                <div className="flex items-center justify-between mb-3">
+                  <label className="form-label text-base" style={{ marginBottom: 0 }}>Choose Language *</label>
+                  {userPlan === 'free' && (
+                    <a href="/#pricing" className="text-xs font-semibold px-2.5 py-1 rounded-lg" style={{ background: 'rgba(255,107,26,0.1)', color: '#FF6B1A', border: '1px solid rgba(255,107,26,0.25)' }}>
+                      🔒 3 more in Starter →
+                    </a>
+                  )}
+                </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {LANGUAGES.map((lang) => (
-                    <button
-                      key={lang.code}
-                      type="button"
-                      onClick={() => set('language', lang.code)}
-                      className="p-3 rounded-xl text-center transition-all duration-200"
-                      style={{
-                        background: form.language === lang.code ? 'rgba(255,107,26,0.15)' : 'rgba(255,255,255,0.04)',
-                        border: form.language === lang.code
-                          ? '1px solid rgba(255,107,26,0.6)'
-                          : '1px solid rgba(255,255,255,0.08)',
-                        boxShadow: form.language === lang.code ? '0 0 12px rgba(255,107,26,0.2)' : 'none',
-                      }}
-                    >
-                      <div
-                        className="text-xl font-bold mb-0.5"
-                        style={{ color: form.language === lang.code ? '#FF6B1A' : 'white' }}
+                  {LANGUAGES.map((lang) => {
+                    const locked = userPlan === 'free' && !lang.free
+                    const active = form.language === lang.code
+                    return (
+                      <button
+                        key={lang.code}
+                        type="button"
+                        onClick={() => {
+                          if (locked) return
+                          set('language', lang.code)
+                        }}
+                        className="p-3 rounded-xl text-center transition-all duration-200 relative"
+                        style={{
+                          background: locked ? 'rgba(255,255,255,0.02)' : active ? 'rgba(255,107,26,0.15)' : 'rgba(255,255,255,0.04)',
+                          border: locked ? '1px solid rgba(255,255,255,0.05)' : active ? '1px solid rgba(255,107,26,0.6)' : '1px solid rgba(255,255,255,0.08)',
+                          boxShadow: active ? '0 0 12px rgba(255,107,26,0.2)' : 'none',
+                          cursor: locked ? 'not-allowed' : 'pointer',
+                          opacity: locked ? 0.5 : 1,
+                        }}
                       >
-                        {lang.label}
-                      </div>
-                      <div className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                        {lang.sub !== lang.label ? lang.sub : ''}
-                      </div>
-                    </button>
-                  ))}
+                        {locked && (
+                          <span className="absolute top-1 right-1 text-[9px] font-bold px-1 py-0.5 rounded" style={{ background: 'rgba(255,107,26,0.15)', color: '#FF6B1A' }}>
+                            Starter
+                          </span>
+                        )}
+                        <div className="text-xl font-bold mb-0.5" style={{ color: locked ? 'rgba(255,255,255,0.3)' : active ? '#FF6B1A' : 'white' }}>
+                          {lang.label}
+                        </div>
+                        <div className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                          {lang.sub !== lang.label ? lang.sub : locked ? '🔒' : ''}
+                        </div>
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
 

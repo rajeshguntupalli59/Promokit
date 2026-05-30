@@ -51,8 +51,8 @@ const NAV_ITEMS = [
   { id: 'overview', label: 'Overview', icon: '📊' },
   { id: 'businesses', label: 'My Businesses', icon: '🏪' },
   { id: 'generations', label: 'Generations', icon: '📝' },
-  { id: 'history', label: 'History', icon: '🕐', href: '/history' },
-  { id: 'broadcast', label: 'Broadcast', icon: '📣', href: '/broadcast' },
+  { id: 'history', label: 'History', icon: '🕐', href: '/history', minPlan: 'starter' },
+  { id: 'broadcast', label: 'Broadcast', icon: '📣', href: '/broadcast', minPlan: 'growth' },
   { id: 'settings', label: 'Settings', icon: '⚙️' },
 ]
 
@@ -147,16 +147,22 @@ export default function DashboardClient({ user, profile, businesses, generations
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
-          {NAV_ITEMS.map(item => (
-            item.href ? (
+          {NAV_ITEMS.map(item => {
+            const itemLocked = item.minPlan === 'growth' ? plan !== 'growth' : item.minPlan === 'starter' ? plan === 'free' : false
+            return item.href ? (
               <Link
                 key={item.id}
-                href={item.href}
+                href={itemLocked ? '/#pricing' : item.href}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-left transition-all duration-150"
-                style={{ color: 'rgba(255,255,255,0.55)', border: '1px solid transparent' }}
+                style={{ color: itemLocked ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.55)', border: '1px solid transparent' }}
               >
                 <span>{item.icon}</span>
-                {item.label}
+                <span className="flex-1">{item.label}</span>
+                {itemLocked && (
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: item.minPlan === 'growth' ? 'rgba(34,197,94,0.15)' : 'rgba(255,107,26,0.15)', color: item.minPlan === 'growth' ? '#22C55E' : '#FF6B1A' }}>
+                    {item.minPlan === 'growth' ? 'Growth' : 'Starter'}
+                  </span>
+                )}
               </Link>
             ) : (
               <button
@@ -173,7 +179,7 @@ export default function DashboardClient({ user, profile, businesses, generations
                 {item.label}
               </button>
             )
-          ))}
+          })}
         </nav>
 
         {/* User section */}

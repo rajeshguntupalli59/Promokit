@@ -164,6 +164,7 @@ OUTPUT: Return ONLY valid JSON — no markdown fences, no explanation:
     return Response.json({
       success: true,
       data: generated,
+      plan: profile?.plan ?? 'free',
       business: {
         businessName, businessType, description, location, whatsapp, language, tone,
         offerEnabled: offerEnabled ?? false,

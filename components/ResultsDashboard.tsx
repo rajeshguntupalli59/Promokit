@@ -313,9 +313,32 @@ function svgPattern(type: TemplateConfig['pattern'], color: string): string {
   }
 }
 
+// Templates available on free plan
+const FREE_TEMPLATES: FlyerTemplate[] = ['saffron', 'diwali', 'midnight']
+
+function UpgradeGate({ label, requiredPlan = 'starter', children }: { label: string; requiredPlan?: 'starter' | 'growth'; children: React.ReactNode }) {
+  return (
+    <div className="relative">
+      <div style={{ opacity: 0.3, pointerEvents: 'none', userSelect: 'none' }}>{children}</div>
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-xl" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(2px)' }}>
+        <span className="text-xl">🔒</span>
+        <p className="text-xs font-bold text-white/90 text-center px-2">{label}</p>
+        <a
+          href="/#pricing"
+          className="text-xs font-bold px-3 py-1.5 rounded-lg transition-all"
+          style={{ background: requiredPlan === 'growth' ? 'rgba(34,197,94,0.2)' : 'rgba(255,107,26,0.2)', color: requiredPlan === 'growth' ? '#22C55E' : '#FF6B1A', border: `1px solid ${requiredPlan === 'growth' ? 'rgba(34,197,94,0.4)' : 'rgba(255,107,26,0.4)'}` }}
+        >
+          Upgrade to {requiredPlan === 'growth' ? 'Growth' : 'Starter'} →
+        </a>
+      </div>
+    </div>
+  )
+}
+
 export default function ResultsDashboard() {
   const [activeTab, setActiveTab] = useState<Tab>('WhatsApp');
   const [result, setResult] = useState<ResultPayload | null>(null);
+  const [plan, setPlan] = useState<string>('free');
   const [flyerTemplate, setFlyerTemplate] = useState<FlyerTemplate>('saffron');
   const [templateCategory, setTemplateCategory] = useState('All');
   const [downloading, setDownloading] = useState(false);
@@ -325,14 +348,21 @@ export default function ResultsDashboard() {
 
   useEffect(() => {
     const stored = localStorage.getItem('promokit_result');
+    const storedPlan = localStorage.getItem('promokit_plan') ?? 'free';
+    setPlan(storedPlan);
     if (stored) {
       try {
-        setResult(JSON.parse(stored));
+        const parsed = JSON.parse(stored);
+        setResult(parsed);
+        if (parsed.plan) setPlan(parsed.plan);
       } catch {
         // ignore
       }
     }
   }, []);
+
+  const isPaid = plan === 'starter' || plan === 'growth';
+  const isGrowth = plan === 'growth';
 
   function buildPosterParams(extra?: Record<string, string>) {
     if (!result) return new URLSearchParams();
@@ -539,36 +569,37 @@ export default function ResultsDashboard() {
               {visibleTemplates.map(key => {
                 const t = FLYER_TEMPLATES[key];
                 const active = flyerTemplate === key;
+                const locked = !isPaid && !FREE_TEMPLATES.includes(key);
                 return (
                   <button
                     key={key}
-                    onClick={() => setFlyerTemplate(key)}
+                    onClick={() => { if (!locked) setFlyerTemplate(key) }}
                     className="relative rounded-xl overflow-hidden transition-all duration-200 group"
                     style={{
                       aspectRatio: '3/4',
                       background: t.bg,
-                      border: active ? `2px solid ${t.accent}` : '2px solid rgba(255,255,255,0.08)',
+                      border: active ? `2px solid ${t.accent}` : locked ? '2px solid rgba(255,255,255,0.04)' : '2px solid rgba(255,255,255,0.08)',
                       boxShadow: active ? `0 0 18px ${t.accent}44` : 'none',
                       transform: active ? 'scale(1.04)' : 'scale(1)',
+                      opacity: locked ? 0.55 : 1,
+                      cursor: locked ? 'not-allowed' : 'pointer',
                     }}
                   >
-                    {/* Mini header strip */}
                     <div className="absolute top-0 left-0 right-0 h-1/3" style={{ background: t.headerBg }} />
-                    {/* Pattern overlay on thumbnail */}
                     {t.pattern !== 'none' && (
                       <div className="absolute inset-0 opacity-60" style={{ backgroundImage: svgPattern(t.pattern, t.patternColor) }} />
                     )}
-                    {/* Label */}
                     <div className="absolute inset-0 flex flex-col items-center justify-end pb-2 px-1">
                       <div className="text-lg">{t.emoji}</div>
                       <div className="text-white/80 text-[9px] font-bold text-center leading-tight mt-0.5">{t.label}</div>
                     </div>
-                    {/* Active checkmark */}
-                    {active && (
-                      <div
-                        className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full flex items-center justify-center"
-                        style={{ background: t.accent }}
-                      >
+                    {locked && (
+                      <div className="absolute top-1 left-1 text-[8px] font-bold px-1 py-0.5 rounded" style={{ background: 'rgba(255,107,26,0.8)', color: '#fff' }}>
+                        Starter
+                      </div>
+                    )}
+                    {active && !locked && (
+                      <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full flex items-center justify-center" style={{ background: t.accent }}>
                         <svg width="8" height="8" viewBox="0 0 10 10" fill="none">
                           <path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
@@ -578,23 +609,36 @@ export default function ResultsDashboard() {
                 );
               })}
             </div>
+            {!isPaid && (
+              <div className="text-center mb-4">
+                <a href="/#pricing" className="text-xs font-semibold" style={{ color: 'rgba(255,107,26,0.7)' }}>
+                  🔒 6 more premium templates — Upgrade to Starter →
+                </a>
+              </div>
+            )}
 
             {/* Animated toggle */}
             <div className="flex items-center justify-between mb-4">
               <span className="text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.4)' }}>
                 Preview
               </span>
-              <button
-                onClick={() => setAnimated(a => !a)}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all"
-                style={
-                  animated
-                    ? { background: 'rgba(99,102,241,0.15)', color: '#818CF8', border: '1px solid rgba(99,102,241,0.35)' }
-                    : { background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.1)' }
-                }
-              >
-                {animated ? '✨ Animated ON' : '✨ Animate'}
-              </button>
+              {isPaid ? (
+                <button
+                  onClick={() => setAnimated(a => !a)}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all"
+                  style={
+                    animated
+                      ? { background: 'rgba(99,102,241,0.15)', color: '#818CF8', border: '1px solid rgba(99,102,241,0.35)' }
+                      : { background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.1)' }
+                  }
+                >
+                  {animated ? '✨ Animated ON' : '✨ Animate'}
+                </button>
+              ) : (
+                <a href="/#pricing" className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold" style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.25)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                  🔒 Animate — Starter
+                </a>
+              )}
             </div>
 
             {/* Poster canvas */}
@@ -822,20 +866,38 @@ export default function ResultsDashboard() {
                   )}
                   {downloading ? 'Preparing…' : 'PNG (3×)'}
                 </button>
-                <button
-                  onClick={downloadPdf}
-                  disabled={downloading}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all"
-                  style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.8)', border: '1px solid rgba(255,255,255,0.12)' }}
-                >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" strokeLinecap="round" strokeLinejoin="round"/>
-                    <polyline points="14 2 14 8 20 8" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  PDF
-                </button>
+
+                {isPaid ? (
+                  <button
+                    onClick={downloadPdf}
+                    disabled={downloading}
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all"
+                    style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.8)', border: '1px solid rgba(255,255,255,0.12)' }}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" strokeLinecap="round" strokeLinejoin="round"/>
+                      <polyline points="14 2 14 8 20 8" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    PDF
+                  </button>
+                ) : (
+                  <a href="/#pricing" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm" style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.3)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    🔒 PDF — Starter
+                  </a>
+                )}
               </div>
-              <p className="text-xs text-white/25">WhatsApp QR included · Print-ready PDF · Share directly</p>
+
+              {!isPaid && (
+                <div className="text-center px-4 py-2.5 rounded-xl" style={{ background: 'rgba(255,107,26,0.06)', border: '1px solid rgba(255,107,26,0.15)' }}>
+                  <p className="text-xs font-medium" style={{ color: 'rgba(255,107,26,0.8)' }}>
+                    🔒 Free plan · <a href="/#pricing" className="font-bold underline">Upgrade to Starter</a> for PDF, QR code, all templates, all languages &amp; unlimited generations
+                  </p>
+                </div>
+              )}
+
+              {isPaid && (
+                <p className="text-xs text-white/25">WhatsApp QR included · Print-ready PDF · Share directly</p>
+              )}
             </div>
           </div>
         );
