@@ -12,6 +12,8 @@ type GeneratedData = {
   flyerHighlight: string;
 };
 
+type PriceItem = { name: string; price: string; original: string };
+
 type ResultPayload = {
   success: boolean;
   data: GeneratedData;
@@ -21,6 +23,11 @@ type ResultPayload = {
     location: string;
     whatsapp: string;
     language: string;
+    offerEnabled?: boolean;
+    offerOccasion?: string;
+    offerBadge?: string;
+    offerValidTill?: string;
+    offerItems?: PriceItem[];
   };
 };
 
@@ -256,6 +263,7 @@ export default function ResultsDashboard() {
     if (!result || downloading) return;
     setDownloading(true);
     try {
+      const offerItems = result.business.offerItems?.filter(it => it.name) ?? [];
       const params = new URLSearchParams({
         name: result.business.businessName,
         type: result.business.businessType,
@@ -265,6 +273,10 @@ export default function ResultsDashboard() {
         highlight: result.data.flyerHighlight ?? '',
         template: flyerTemplate,
         language: result.business.language ?? 'English',
+        offerBadge: result.business.offerEnabled ? (result.business.offerBadge ?? '') : '',
+        offerOccasion: result.business.offerEnabled ? (result.business.offerOccasion ?? '') : '',
+        offerValidTill: result.business.offerEnabled ? (result.business.offerValidTill ?? '') : '',
+        offerItems: result.business.offerEnabled && offerItems.length ? JSON.stringify(offerItems) : '',
       });
       const res = await fetch(`/api/poster?${params}`);
       if (!res.ok) throw new Error('render failed');
@@ -515,7 +527,7 @@ export default function ResultsDashboard() {
 
               {/* Body */}
               <div className="relative px-7 py-7 text-center" style={{ zIndex: 1 }}>
-                {/* Offer badge */}
+                {/* Offer badge — dynamic or default */}
                 <div
                   className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-black mb-5 tracking-wider"
                   style={{
@@ -525,7 +537,9 @@ export default function ResultsDashboard() {
                     letterSpacing: '0.12em',
                   }}
                 >
-                  ✦ SPECIAL OFFER ✦
+                  {business.offerEnabled && business.offerBadge
+                    ? `✦ ${business.offerBadge.toUpperCase()} ✦`
+                    : '✦ SPECIAL OFFER ✦'}
                 </div>
 
                 {/* AI headline */}
@@ -548,11 +562,55 @@ export default function ResultsDashboard() {
 
                 {/* AI highlight */}
                 <p
-                  className="text-sm leading-relaxed mb-6"
+                  className="text-sm leading-relaxed mb-4"
                   style={{ color: tpl.textSecondary }}
                 >
                   {data.flyerHighlight || 'Visit us today for exclusive deals on all products.'}
                 </p>
+
+                {/* Price list — shown when offer has items */}
+                {business.offerEnabled && business.offerItems && business.offerItems.some(it => it.name) && (
+                  <div
+                    className="rounded-xl px-4 py-3 mb-5 text-left"
+                    style={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${tpl.accent}33` }}
+                  >
+                    {business.offerOccasion && (
+                      <div
+                        className="text-center text-xs font-bold mb-2 tracking-wider"
+                        style={{ color: tpl.pillColor }}
+                      >
+                        {business.offerOccasion.toUpperCase()} SPECIAL
+                      </div>
+                    )}
+                    <div className="space-y-1.5">
+                      {business.offerItems.filter(it => it.name).map((it, i) => (
+                        <div key={i} className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-semibold text-white/80">{it.name}</span>
+                          <div className="flex items-center gap-1.5">
+                            {it.original && (
+                              <span className="text-xs line-through" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                                ₹{it.original}
+                              </span>
+                            )}
+                            {it.price && (
+                              <span className="text-xs font-black" style={{ color: tpl.pillColor }}>
+                                ₹{it.price}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {business.offerValidTill && (
+                      <div
+                        className="text-center text-xs mt-2 pt-2"
+                        style={{ color: 'rgba(255,255,255,0.35)', borderTop: '1px solid rgba(255,255,255,0.08)' }}
+                      >
+                        Valid till {business.offerValidTill}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Contact strip */}
                 <div

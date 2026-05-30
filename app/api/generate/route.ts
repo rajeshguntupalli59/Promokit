@@ -39,7 +39,10 @@ export async function POST(req: Request) {
     }
 
     const data = await req.json()
-    const { businessName, businessType, description, location, whatsapp, language, tone, festivals } = data
+    const {
+      businessName, businessType, description, location, whatsapp, language, tone, festivals,
+      offerEnabled, offerOccasion, offerBadge, offerValidTill, offerItems,
+    } = data
 
     if (!businessName || !businessType || !description) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 })
@@ -50,6 +53,27 @@ export async function POST(req: Request) {
 
     const systemPrompt = buildSystemPrompt()
 
+    // Build offer context string
+    let offerContext = ''
+    if (offerEnabled) {
+      const lines: string[] = ['CURRENT PROMOTION:']
+      if (offerOccasion) lines.push(`Occasion: ${offerOccasion}`)
+      if (offerBadge) lines.push(`Offer badge: ${offerBadge}`)
+      if (offerValidTill) lines.push(`Valid till: ${offerValidTill}`)
+      if (Array.isArray(offerItems)) {
+        const priced = offerItems.filter((it: { name: string; price: string; original: string }) => it.name)
+        if (priced.length) {
+          lines.push('Price list:')
+          priced.forEach((it: { name: string; price: string; original: string }) => {
+            const orig = it.original ? ` (was ₹${it.original})` : ''
+            lines.push(`  • ${it.name}${it.price ? ` — ₹${it.price}${orig}` : ''}`)
+          })
+        }
+      }
+      lines.push('→ Reference this offer prominently in WhatsApp, Instagram, and Facebook content. Mention specific prices where provided. Create urgency around the valid-till date if given.')
+      offerContext = '\n\n' + lines.join('\n')
+    }
+
     const userPrompt = `BUSINESS BRIEF:
 Name: ${businessName}
 Type: ${businessType}
@@ -58,7 +82,7 @@ Location: ${location || 'India'}
 WhatsApp/Contact: ${whatsapp || 'Contact us'}
 Language: ${language}
 Tone: ${tone}
-Festival greetings: ${festivals ? 'Yes — weave in current Indian festival context naturally' : 'No'}
+Festival greetings: ${festivals ? 'Yes — weave in current Indian festival context naturally' : 'No'}${offerContext}
 
 TONE GUIDE: ${toneGuide}
 

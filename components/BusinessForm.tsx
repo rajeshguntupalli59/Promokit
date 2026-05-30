@@ -3,6 +3,8 @@
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 
+type PriceItem = { name: string; price: string; original: string };
+
 type FormData = {
   businessName: string;
   businessType: string;
@@ -12,7 +14,32 @@ type FormData = {
   language: string;
   tone: string;
   festivals: boolean;
+  // offer fields
+  offerEnabled: boolean;
+  offerOccasion: string;
+  offerBadge: string;
+  offerValidTill: string;
+  offerItems: PriceItem[];
 };
+
+const OCCASIONS = [
+  { value: '', label: 'No specific occasion' },
+  { value: 'Diwali', label: '🪔 Diwali' },
+  { value: 'Eid', label: '🌙 Eid' },
+  { value: 'Christmas', label: '🎄 Christmas' },
+  { value: 'Holi', label: '🌈 Holi' },
+  { value: 'Pongal', label: '🌾 Pongal' },
+  { value: 'Navratri', label: '🎺 Navratri' },
+  { value: 'New Year', label: '🎆 New Year' },
+  { value: 'Independence Day', label: '🇮🇳 Independence Day' },
+  { value: 'Weekend Sale', label: '🛍️ Weekend Sale' },
+  { value: 'Monthly Clearance', label: '📦 Monthly Clearance' },
+];
+
+const BADGE_PRESETS = [
+  '20% OFF', '50% OFF', 'FLAT ₹100 OFF', 'BUY 2 GET 1 FREE',
+  'FREE Delivery', 'Special Price', 'Limited Time Offer',
+];
 
 const BUSINESS_TYPES = [
   'Kirana Store', 'Restaurant', 'Salon', 'Clinic', 'Boutique',
@@ -50,10 +77,28 @@ export default function BusinessForm() {
     language: 'Hindi',
     tone: 'Friendly & Warm',
     festivals: true,
+    offerEnabled: false,
+    offerOccasion: '',
+    offerBadge: '',
+    offerValidTill: '',
+    offerItems: [{ name: '', price: '', original: '' }],
   });
 
-  const set = (field: keyof FormData, value: string | boolean) =>
+  const set = (field: keyof FormData, value: string | boolean | PriceItem[]) =>
     setForm((prev) => ({ ...prev, [field]: value }));
+
+  const setItem = (idx: number, field: keyof PriceItem, val: string) =>
+    setForm(prev => {
+      const items = prev.offerItems.map((it, i) => i === idx ? { ...it, [field]: val } : it);
+      return { ...prev, offerItems: items };
+    });
+
+  const addItem = () =>
+    form.offerItems.length < 5 &&
+    setForm(prev => ({ ...prev, offerItems: [...prev.offerItems, { name: '', price: '', original: '' }] }));
+
+  const removeItem = (idx: number) =>
+    setForm(prev => ({ ...prev, offerItems: prev.offerItems.filter((_, i) => i !== idx) }));
 
   const progressPct = step === 1 ? 33 : step === 2 ? 66 : 100;
 
@@ -190,6 +235,140 @@ export default function BusinessForm() {
                     value={form.whatsapp}
                     onChange={(e) => set('whatsapp', e.target.value)}
                   />
+                </div>
+
+                {/* ── OFFER SECTION ────────────────────────────── */}
+                <div
+                  className="rounded-xl overflow-hidden"
+                  style={{ border: '1px solid rgba(255,215,0,0.25)' }}
+                >
+                  {/* Toggle header */}
+                  <button
+                    type="button"
+                    onClick={() => set('offerEnabled', !form.offerEnabled)}
+                    className="w-full flex items-center justify-between px-4 py-3.5 text-left transition-all duration-200"
+                    style={{ background: form.offerEnabled ? 'rgba(255,215,0,0.08)' : 'rgba(255,255,255,0.03)' }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl">🏷️</span>
+                      <div>
+                        <div className="text-sm font-bold text-white">Add Special Offer / Price List</div>
+                        <div className="text-xs text-white/40">Festival sale, discounts, product prices on poster</div>
+                      </div>
+                    </div>
+                    <div
+                      className="w-9 h-5 rounded-full transition-all duration-200 relative flex-shrink-0"
+                      style={{ background: form.offerEnabled ? '#FFD700' : 'rgba(255,255,255,0.15)' }}
+                    >
+                      <div
+                        className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all duration-200"
+                        style={{ left: form.offerEnabled ? '18px' : '2px' }}
+                      />
+                    </div>
+                  </button>
+
+                  {form.offerEnabled && (
+                    <div className="px-4 pb-5 pt-3 space-y-4" style={{ background: 'rgba(255,215,0,0.04)' }}>
+                      {/* Occasion */}
+                      <div>
+                        <label className="form-label">Occasion / Sale Type</label>
+                        <select
+                          className="form-input"
+                          value={form.offerOccasion}
+                          onChange={(e) => set('offerOccasion', e.target.value)}
+                        >
+                          {OCCASIONS.map(o => (
+                            <option key={o.value} value={o.value}>{o.label}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Offer badge */}
+                      <div>
+                        <label className="form-label">Offer Badge</label>
+                        <input
+                          className="form-input"
+                          placeholder='e.g. "20% OFF" or "BUY 2 GET 1 FREE"'
+                          value={form.offerBadge}
+                          onChange={(e) => set('offerBadge', e.target.value)}
+                        />
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {BADGE_PRESETS.map(b => (
+                            <button
+                              key={b}
+                              type="button"
+                              onClick={() => set('offerBadge', b)}
+                              className="px-2.5 py-1 rounded-lg text-xs font-semibold transition-all duration-150"
+                              style={
+                                form.offerBadge === b
+                                  ? { background: 'rgba(255,215,0,0.22)', color: '#FFD700', border: '1px solid rgba(255,215,0,0.5)' }
+                                  : { background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.1)' }
+                              }
+                            >{b}</button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Price items */}
+                      <div>
+                        <label className="form-label">Product Prices (optional)</label>
+                        <div className="space-y-2">
+                          {form.offerItems.map((item, idx) => (
+                            <div key={idx} className="flex gap-2 items-center">
+                              <input
+                                className="form-input flex-[2]"
+                                placeholder="Item name"
+                                value={item.name}
+                                onChange={e => setItem(idx, 'name', e.target.value)}
+                              />
+                              <input
+                                className="form-input flex-1"
+                                placeholder="₹ Price"
+                                value={item.price}
+                                onChange={e => setItem(idx, 'price', e.target.value)}
+                              />
+                              <input
+                                className="form-input flex-1"
+                                placeholder="Was ₹"
+                                value={item.original}
+                                onChange={e => setItem(idx, 'original', e.target.value)}
+                              />
+                              {form.offerItems.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => removeItem(idx)}
+                                  className="text-white/30 hover:text-red-400 transition-colors flex-shrink-0 text-lg leading-none"
+                                >×</button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex items-center gap-2 mt-2 text-xs text-white/40">
+                          <span>Item · Offer Price · Original Price (optional)</span>
+                        </div>
+                        {form.offerItems.length < 5 && (
+                          <button
+                            type="button"
+                            onClick={addItem}
+                            className="mt-2 text-xs font-semibold transition-colors"
+                            style={{ color: '#FFD700' }}
+                          >+ Add another item</button>
+                        )}
+                      </div>
+
+                      {/* Valid till */}
+                      <div>
+                        <label className="form-label">Valid Till (optional)</label>
+                        <input
+                          className="form-input"
+                          type="date"
+                          value={form.offerValidTill}
+                          onChange={e => set('offerValidTill', e.target.value)}
+                          min={new Date().toISOString().split('T')[0]}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -358,6 +537,48 @@ export default function BusinessForm() {
                     <span className="text-sm text-white/80 font-medium">{value}</span>
                   </div>
                 ))}
+
+                {form.offerEnabled && (
+                  <div
+                    className="mt-3 pt-3 space-y-2"
+                    style={{ borderTop: '1px solid rgba(255,215,0,0.2)' }}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm">🏷️</span>
+                      <span className="text-xs font-semibold text-yellow-400">Special Offer Added</span>
+                    </div>
+                    {form.offerOccasion && (
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-0">
+                        <span className="text-xs text-white/40 sm:w-40 flex-shrink-0">Occasion</span>
+                        <span className="text-sm text-white/80 font-medium">{form.offerOccasion}</span>
+                      </div>
+                    )}
+                    {form.offerBadge && (
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-0">
+                        <span className="text-xs text-white/40 sm:w-40 flex-shrink-0">Offer Badge</span>
+                        <span className="text-sm font-bold" style={{ color: '#FFD700' }}>{form.offerBadge}</span>
+                      </div>
+                    )}
+                    {form.offerItems.some(it => it.name) && (
+                      <div className="flex flex-col sm:flex-row gap-1 sm:gap-0">
+                        <span className="text-xs text-white/40 sm:w-40 flex-shrink-0 pt-0.5">Price List</span>
+                        <div className="space-y-0.5">
+                          {form.offerItems.filter(it => it.name).map((it, i) => (
+                            <div key={i} className="text-sm text-white/80">
+                              {it.name}{it.price ? ` — ₹${it.price}` : ''}{it.original ? ` (was ₹${it.original})` : ''}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {form.offerValidTill && (
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-0">
+                        <span className="text-xs text-white/40 sm:w-40 flex-shrink-0">Valid Till</span>
+                        <span className="text-sm text-white/80 font-medium">{form.offerValidTill}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div

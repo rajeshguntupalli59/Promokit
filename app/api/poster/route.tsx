@@ -98,6 +98,8 @@ const LANG_FONT: Record<string, string> = {
   Bengali: 'Noto Sans Bengali',
 }
 
+type PriceItem = { name: string; price: string; original: string }
+
 export async function GET(req: NextRequest) {
   const p = req.nextUrl.searchParams
   const businessName = p.get('name') || 'Your Business'
@@ -108,6 +110,15 @@ export async function GET(req: NextRequest) {
   const highlight = p.get('highlight') || 'Visit us today for exclusive deals on all products.'
   const template = p.get('template') || 'saffron'
   const language = p.get('language') || 'English'
+  const offerBadge = p.get('offerBadge') || ''
+  const offerOccasion = p.get('offerOccasion') || ''
+  const offerValidTill = p.get('offerValidTill') || ''
+  let offerItems: PriceItem[] = []
+  try {
+    const raw = p.get('offerItems') || ''
+    if (raw) offerItems = JSON.parse(raw)
+  } catch { offerItems = [] }
+  const hasOffer = !!(offerBadge || offerItems.length)
 
   const tpl = TEMPLATES[template] ?? TEMPLATES.saffron
 
@@ -246,7 +257,7 @@ export async function GET(req: NextRequest) {
             flex: 1,
           }}
         >
-          {/* Offer badge */}
+          {/* Offer badge — dynamic or default */}
           <div
             style={{
               display: 'flex',
@@ -261,7 +272,7 @@ export async function GET(req: NextRequest) {
               marginBottom: 44,
             }}
           >
-            ✦  SPECIAL OFFER  ✦
+            {hasOffer && offerBadge ? `✦  ${offerBadge.toUpperCase()}  ✦` : '✦  SPECIAL OFFER  ✦'}
           </div>
 
           {/* AI-generated headline */}
@@ -297,13 +308,74 @@ export async function GET(req: NextRequest) {
               color: tpl.textSub,
               textAlign: 'center',
               lineHeight: 1.55,
-              marginBottom: 52,
+              marginBottom: hasOffer && offerItems.length ? 32 : 52,
               maxWidth: 860,
               fontWeight: 400,
             }}
           >
             {highlight}
           </div>
+
+          {/* Price list card — only when offer items are present */}
+          {hasOffer && offerItems.length > 0 && (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                width: '100%',
+                padding: '28px 48px',
+                borderRadius: 24,
+                background: 'rgba(255,255,255,0.06)',
+                border: `1.5px solid ${tpl.accentBorder}`,
+                marginBottom: 32,
+              }}
+            >
+              {offerOccasion && (
+                <div style={{
+                  fontSize: 16, fontWeight: 700, color: tpl.pillColor,
+                  letterSpacing: '0.18em', textAlign: 'center', marginBottom: 20,
+                  display: 'flex', justifyContent: 'center',
+                }}>
+                  {offerOccasion.toUpperCase()} SPECIAL
+                </div>
+              )}
+              {offerItems.map((it, i) => (
+                <div
+                  key={i}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    paddingTop: i > 0 ? 14 : 0,
+                    marginTop: i > 0 ? 14 : 0,
+                    borderTop: i > 0 ? `1px solid rgba(255,255,255,0.08)` : 'none',
+                  }}
+                >
+                  <span style={{ fontSize: 22, fontWeight: 700, color: '#fff' }}>{it.name}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                    {it.original && (
+                      <span style={{ fontSize: 20, color: 'rgba(255,255,255,0.35)', textDecoration: 'line-through' }}>
+                        ₹{it.original}
+                      </span>
+                    )}
+                    {it.price && (
+                      <span style={{ fontSize: 26, fontWeight: 900, color: tpl.pillColor }}>₹{it.price}</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {offerValidTill && (
+                <div style={{
+                  fontSize: 16, color: 'rgba(255,255,255,0.4)', textAlign: 'center',
+                  marginTop: 20, paddingTop: 16,
+                  borderTop: '1px solid rgba(255,255,255,0.08)',
+                  display: 'flex', justifyContent: 'center',
+                }}>
+                  Valid till {offerValidTill}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Contact strip */}
           <div
