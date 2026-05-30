@@ -1,7 +1,13 @@
+'use client';
+
+import { useState } from 'react';
+
 const plans = [
   {
     name: 'Free',
-    price: '₹0',
+    monthlyPrice: '₹0',
+    annualPrice: '₹0',
+    annualNote: 'forever free',
     period: 'forever',
     tagline: 'Perfect to try it out',
     color: '#6366F1',
@@ -19,7 +25,9 @@ const plans = [
   },
   {
     name: 'Starter',
-    price: '₹299',
+    monthlyPrice: '₹299',
+    annualPrice: '₹207',
+    annualNote: '₹2,490/yr · Save ₹1,098',
     period: '/month',
     tagline: 'For active small businesses',
     color: '#FF6B1A',
@@ -39,7 +47,9 @@ const plans = [
   },
   {
     name: 'Growth',
-    price: '₹699',
+    monthlyPrice: '₹699',
+    annualPrice: '₹499',
+    annualNote: '₹5,990/yr · Save ₹2,398',
     period: '/month',
     tagline: 'For serious business growth',
     color: '#22C55E',
@@ -60,8 +70,10 @@ const plans = [
 ];
 
 export default function Pricing() {
+  const [annual, setAnnual] = useState(false);
+
   return (
-    <section id="pricing" className="py-24 lg:py-32 relative overflow-hidden" style={{ background: '#0F0F1A' }}>
+    <section id="pricing" className="py-28 lg:py-36 relative overflow-hidden" style={{ background: '#000000' }}>
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
@@ -70,39 +82,79 @@ export default function Pricing() {
       />
 
       <div className="relative z-10 max-w-screen-xl mx-auto px-6 lg:px-10">
-        <div className="text-center mb-14">
+        {/* Header */}
+        <div className="text-center mb-12">
           <div
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium mb-4"
-            style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', color: '#22C55E' }}
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-widest mb-5"
+            style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', color: '#22C55E' }}
           >
-            Simple Pricing
+            Pricing
           </div>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold mb-4">
+          <h2
+            className="font-black leading-tight tracking-tight mb-4"
+            style={{ fontSize: 'clamp(2.2rem, 4vw, 3.5rem)', letterSpacing: '-0.03em' }}
+          >
             Transparent.{' '}
-            <span style={{ background: 'linear-gradient(135deg, #22C55E, #4ADE80)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+            <span
+              style={{
+                background: 'linear-gradient(135deg, #22C55E, #4ADE80)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}
+            >
               Affordable.
             </span>{' '}
             No surprises.
           </h2>
-          <p className="text-white/50 text-lg max-w-2xl mx-auto">
+          <p className="text-lg mb-8" style={{ color: 'rgba(255,255,255,0.5)' }}>
             Less than a cup of chai per day. Cancel anytime.
           </p>
+
+          {/* Billing toggle */}
+          <div className="inline-flex items-center justify-center">
+            <div className="billing-toggle">
+              <button
+                className={annual ? '' : 'active'}
+                onClick={() => setAnnual(false)}
+              >
+                Monthly
+              </button>
+              <button
+                className={annual ? 'active' : ''}
+                onClick={() => setAnnual(true)}
+              >
+                Annual
+                <span
+                  className="ml-2 text-xs px-2 py-0.5 rounded-full font-bold"
+                  style={
+                    annual
+                      ? { background: 'rgba(255,255,255,0.2)', color: 'white' }
+                      : { background: 'rgba(34,197,94,0.2)', color: '#22C55E' }
+                  }
+                >
+                  Save 2 months
+                </span>
+              </button>
+            </div>
+          </div>
         </div>
 
+        {/* Plans grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
           {plans.map((plan, i) => (
             <div
               key={i}
-              className={`relative rounded-2xl p-7 card-hover ${plan.popular ? '' : ''}`}
+              className={`relative rounded-2xl p-8 card-hover`}
               style={
                 plan.popular
                   ? {
-                      background: 'linear-gradient(145deg, #1a1128, #1a1020)',
-                      border: '1px solid rgba(255,107,26,0.4)',
-                      boxShadow: '0 0 40px rgba(255,107,26,0.15)',
+                      background: 'linear-gradient(145deg, #1a0e08, #120a18)',
+                      border: '1px solid rgba(255,107,26,0.45)',
+                      boxShadow: '0 0 50px rgba(255,107,26,0.18)',
                     }
                   : {
-                      background: '#141424',
+                      background: '#111111',
                       border: '1px solid rgba(255,255,255,0.08)',
                     }
               }
@@ -113,28 +165,42 @@ export default function Pricing() {
                 </div>
               )}
 
-              <div className="mb-6">
-                <div
-                  className="text-sm font-semibold mb-1"
-                  style={{ color: plan.color }}
-                >
+              <div className="mb-7">
+                <div className="text-sm font-semibold mb-2" style={{ color: plan.color }}>
                   {plan.name}
                 </div>
                 <div className="flex items-end gap-1 mb-1">
-                  <span className="text-4xl font-black text-white">{plan.price}</span>
-                  <span className="text-white/40 text-sm pb-1">{plan.period}</span>
+                  <span className="text-5xl font-black text-white">
+                    {annual ? plan.annualPrice : plan.monthlyPrice}
+                  </span>
+                  {plan.monthlyPrice !== '₹0' && (
+                    <span className="text-white/40 text-sm pb-2">{plan.period}</span>
+                  )}
                 </div>
-                <p className="text-white/40 text-sm">{plan.tagline}</p>
+                {annual && plan.annualNote && (
+                  <p className="text-xs font-medium mt-1" style={{ color: '#22C55E' }}>
+                    {plan.annualNote}
+                  </p>
+                )}
+                <p className="text-white/40 text-sm mt-2">{plan.tagline}</p>
+                {plan.popular && (
+                  <p
+                    className="text-xs mt-1"
+                    style={{ color: 'rgba(255,107,26,0.7)' }}
+                  >
+                    Most teams start here
+                  </p>
+                )}
               </div>
 
               <div
-                className="h-px mb-6"
-                style={{ background: `linear-gradient(90deg, ${plan.color}30, transparent)` }}
+                className="h-px mb-7"
+                style={{ background: `linear-gradient(90deg, ${plan.color}40, transparent)` }}
               />
 
-              <ul className="space-y-3 mb-8">
+              <ul className="space-y-3.5 mb-9">
                 {plan.features.map((f, j) => (
-                  <li key={j} className="flex items-start gap-2.5 text-sm text-white/70">
+                  <li key={j} className="flex items-start gap-3 text-sm text-white/70">
                     <svg
                       width="16"
                       height="16"
@@ -156,30 +222,34 @@ export default function Pricing() {
                 ))}
               </ul>
 
-              <a
-                href={plan.ctaHref}
-                className={`block text-center w-full py-3.5 rounded-xl font-bold text-sm transition-all duration-200`}
-                style={
-                  plan.popular
-                    ? {
-                        background: 'linear-gradient(135deg, #FF6B1A, #FF8C42)',
-                        color: 'white',
-                        boxShadow: '0 0 30px rgba(255,107,26,0.4)',
-                      }
-                    : {
-                        background: 'rgba(255,255,255,0.06)',
-                        color: 'white',
-                        border: '1px solid rgba(255,255,255,0.12)',
-                      }
-                }
-              >
-                {plan.cta}
-              </a>
+              {plan.popular ? (
+                <div className="animated-border">
+                  <a
+                    href={plan.ctaHref}
+                    className="block text-center w-full py-4 font-bold text-sm text-white"
+                    style={{ borderRadius: '14px' }}
+                  >
+                    {plan.cta}
+                  </a>
+                </div>
+              ) : (
+                <a
+                  href={plan.ctaHref}
+                  className="block text-center w-full py-4 rounded-xl font-bold text-sm transition-all duration-200"
+                  style={{
+                    background: 'rgba(255,255,255,0.06)',
+                    color: 'white',
+                    border: '1px solid rgba(255,255,255,0.12)',
+                  }}
+                >
+                  {plan.cta}
+                </a>
+              )}
             </div>
           ))}
         </div>
 
-        <p className="text-center text-white/30 text-sm mt-8">
+        <p className="text-center text-sm mt-8" style={{ color: 'rgba(255,255,255,0.3)' }}>
           All prices in Indian Rupees (INR) · GST applicable · Cancel anytime
         </p>
       </div>

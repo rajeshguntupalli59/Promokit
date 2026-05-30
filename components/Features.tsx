@@ -2,14 +2,16 @@ const features = [
   {
     icon: '🌐',
     title: '7 Indian Languages',
-    description: 'Write in Hindi, Telugu, Tamil, Marathi, Kannada, Bengali, and English — in the actual script.',
+    description:
+      'Write in Hindi, Telugu, Tamil, Marathi, Kannada, Bengali, and English — in the actual script, with correct grammar and natural tone.',
     color: '#6366F1',
+    featured: true,
   },
   {
     icon: '💬',
     title: 'WhatsApp-Ready Messages',
     description: 'Copy-paste messages that feel personal, local, and drive customers to act.',
-    color: '#22C55E',
+    color: '#25D366',
   },
   {
     icon: '🪔',
@@ -39,55 +41,95 @@ const features = [
 
 export default function Features() {
   return (
-    <section id="features" className="py-24 lg:py-32 relative" style={{ background: '#050508' }}>
+    <section
+      id="features"
+      className="py-28 lg:py-36 relative overflow-hidden"
+      style={{ background: '#0A0A0A' }}
+    >
+      {/* Orb */}
       <div
-        className="absolute inset-0 pointer-events-none"
+        className="orb"
         style={{
-          background: 'radial-gradient(ellipse at 50% 0%, rgba(99,102,241,0.06) 0%, transparent 60%)',
+          width: '700px',
+          height: '700px',
+          top: '0',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'radial-gradient(circle, rgba(99,102,241,0.06) 0%, transparent 60%)',
         }}
       />
 
       <div className="relative z-10 max-w-screen-xl mx-auto px-6 lg:px-10">
-        <div className="text-center mb-14">
+        {/* Header */}
+        <div className="text-center mb-16">
           <div
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium mb-4"
-            style={{ background: 'rgba(255,107,26,0.12)', border: '1px solid rgba(255,107,26,0.3)', color: '#FF6B1A' }}
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-widest mb-5"
+            style={{ background: 'rgba(255,107,26,0.1)', border: '1px solid rgba(255,107,26,0.25)', color: '#FF6B1A' }}
           >
-            Everything You Need
+            Features
           </div>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold mb-4">
-            Your complete{' '}
-            <span style={{ background: 'linear-gradient(135deg, #6366F1, #818CF8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-              marketing kit
+          <h2
+            className="font-black leading-tight tracking-tight"
+            style={{ fontSize: 'clamp(2.2rem, 4vw, 3.5rem)', letterSpacing: '-0.03em' }}
+          >
+            Everything a small business{' '}
+            <span
+              style={{
+                background: 'linear-gradient(135deg, #FF6B1A, #FFD700)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}
+            >
+              needs.
             </span>
           </h2>
-          <p className="text-white/50 text-lg max-w-2xl mx-auto">
+          <p
+            className="text-lg mt-4 max-w-2xl mx-auto"
+            style={{ color: 'rgba(255,255,255,0.5)' }}
+          >
             Everything a marketing agency charges ₹20,000/month for — powered by AI, available instantly.
           </p>
         </div>
 
+        {/* Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {features.map((f, i) => (
             <div
               key={i}
-              className="card-hover rounded-2xl p-6 group"
+              className={`card-hover group rounded-2xl p-7 relative overflow-hidden${f.featured ? ' sm:col-span-2 lg:col-span-2' : ''}`}
               style={{
-                background: '#141424',
-                border: '1px solid rgba(255,255,255,0.06)',
+                background: '#111111',
+                border: '1px solid rgba(255,255,255,0.08)',
                 transition: 'all 0.2s ease',
               }}
             >
+              {/* Hover gradient border effect */}
               <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl mb-4"
+                className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200"
+                style={{
+                  background: `radial-gradient(circle at top left, ${f.color}15 0%, transparent 60%)`,
+                }}
+              />
+
+              {/* Icon */}
+              <div
+                className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl mb-5 relative z-10"
                 style={{ background: `${f.color}12`, border: `1px solid ${f.color}25` }}
               >
                 {f.icon}
               </div>
-              <h3 className="font-bold text-white text-lg mb-2">{f.title}</h3>
-              <p className="text-white/50 text-sm leading-relaxed">{f.description}</p>
+
+              <h3 className="font-bold text-white text-lg mb-2 relative z-10">{f.title}</h3>
+              <p
+                className="text-sm leading-relaxed relative z-10"
+                style={{ color: 'rgba(255,255,255,0.5)' }}
+              >
+                {f.description}
+              </p>
 
               <div
-                className="mt-4 flex items-center gap-1 text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity"
+                className="mt-4 flex items-center gap-1 text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200 relative z-10"
                 style={{ color: f.color }}
               >
                 Included in PromoKit
