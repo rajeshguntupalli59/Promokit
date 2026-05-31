@@ -21,6 +21,8 @@ export default function ChatWidget() {
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
+  useEffect(() => { return () => { abortRef.current?.abort() } }, [])
+
   useEffect(() => {
     if (open && messages.length === 0) {
       setMessages([{

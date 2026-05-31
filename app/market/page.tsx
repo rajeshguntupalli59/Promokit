@@ -438,7 +438,7 @@ const AUDIENCE_OPTIONS = [
 const TONE_OPTIONS = ['Friendly & conversational', 'Urgent & FOMO', 'Professional & credible', 'Story-driven & emotional'];
 
 const HOOK_OPTIONS: Record<CampaignType, string[]> = {
-  social: ['Festival season promotions', 'Save time on marketing', 'Free plan — no credit card', '₹299 is less than chai per day'],
+  social: ['Festival season promotions', 'Save time on marketing', 'Free plan — no credit card', '₹499 for unlimited AI marketing'],
   ads: ['Free trial CTA', 'Compete with big brands', 'AI content in your language', 'Limited-time offer'],
   email: ['Onboarding new users', 'Free to paid conversion', 'Re-engage inactive users', 'Festival campaign strategy'],
   referral: ['Earn free generations', 'Help business community', 'Become a PromoKit partner', 'Festival timing outreach'],

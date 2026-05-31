@@ -289,7 +289,7 @@ export default function Hero() {
                           ⚡ Upgrade for <strong className="text-white">unlimited</strong> messages in all 7 languages
                         </span>
                         <span className="text-xs font-bold ml-3 whitespace-nowrap" style={{ color: '#FF6B1A' }}>
-                          ₹299/mo →
+                          ₹499/mo →
                         </span>
                       </div>
                     </div>

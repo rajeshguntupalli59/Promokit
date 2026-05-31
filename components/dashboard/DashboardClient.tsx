@@ -199,6 +199,12 @@ export default function DashboardClient({ user, profile, businesses, generations
     } catch { setReminders([]) }
   }, [])
 
+  useEffect(() => {
+    const hash = window.location.hash.replace('#', '')
+    const valid = NAV_ITEMS.map(n => n.id)
+    if (hash && valid.includes(hash)) setActiveTab(hash)
+  }, [])
+
   const plan = profile?.plan ?? 'free'
   const used = profile?.generations_this_month ?? 0
   const limit = PLAN_LIMIT[plan]

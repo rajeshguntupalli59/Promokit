@@ -23,7 +23,7 @@ const testimonials = [
     city: 'Hyderabad',
     avatar: '🍛',
     quote:
-      'My competitors spend ₹5000/month on a marketing agency. I spend ₹299 on PromoKit and get better results.',
+      'My competitors spend ₹5000/month on a marketing agency. I spend ₹499 on PromoKit and get better results.',
     gradient: 'from-green-500/10 to-transparent',
   },
 ];

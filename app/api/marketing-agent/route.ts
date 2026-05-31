@@ -6,11 +6,11 @@ const PROMOKIT_CONTEXT = `
 PRODUCT: PromoKit (promokit.in)
 WHAT IT DOES: AI-powered promotional content generator for Indian small businesses. In 30 seconds, business owners get WhatsApp messages, Instagram captions, Facebook posts, Google Business descriptions, and printed poster flyers — all AI-written.
 LANGUAGES: Hindi, Telugu, Tamil, English, Marathi, Kannada, Bengali (7 Indian languages)
-PLANS: Free (3 generations/month, forever) → Starter ₹299/mo → Growth ₹699/mo
-KEY FEATURES: QR code on poster, PDF flyer export, animated poster preview, WhatsApp direct share, business logo on poster, broadcast contact list, referral rewards, festival-aware content
+PLANS: Free (3 generations/month, forever) → Starter ₹499/mo → Growth ₹999/mo
+KEY FEATURES: QR code on poster, PDF flyer export, video/reel creator, business card generator, caption optimizer, hashtag packs, festival planner, marketing agent, auto-publish scheduling, AI chat assistant
 TARGET CUSTOMERS: Indian small business owners — kirana stores, restaurants, clothing shops, salons, medical clinics, coaching centres
 PAIN SOLVED: They need consistent social media presence but can't afford agencies, don't know what to write, or waste hours trying
-USP: Less than a cup of chai per day (₹10/day) for unlimited AI-generated marketing content in their own language
+USP: Full AI marketing suite for less than ₹17/day — videos, cards, auto-publishing, campaigns in their own language
 SIGN-UP LINK: promokit.in
 `
 

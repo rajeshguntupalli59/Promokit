@@ -1017,9 +1017,9 @@ export default function ResultsDashboard() {
           }}
         >
           <div>
-            <div className="font-bold text-white text-lg mb-1">⭐ Upgrade to Starter — ₹299/mo</div>
+            <div className="font-bold text-white text-lg mb-1">⭐ Upgrade to Starter — ₹499/mo</div>
             <p className="text-white/50 text-sm">
-              Unlimited generations · All 7 languages · Festival templates · PDF flyers · QR page
+              Unlimited generations · All 7 languages · Video Creator · Business Card · Auto-publish
             </p>
           </div>
           <Link
