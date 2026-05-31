@@ -20,8 +20,8 @@ const PLANS = [
   {
     key: 'starter' as PlanKey,
     name: 'Starter',
-    price: { monthly: '₹299', annual: '₹207' },
-    annualNote: '₹2,490/yr · Save ₹1,098',
+    price: { monthly: '₹499', annual: '₹349' },
+    annualNote: '₹4,190/yr · Save ₹1,798',
     tagline: 'For active small businesses',
     color: '#FF6B1A',
     popular: true,
@@ -31,8 +31,8 @@ const PLANS = [
   {
     key: 'growth' as PlanKey,
     name: 'Growth',
-    price: { monthly: '₹699', annual: '₹499' },
-    annualNote: '₹5,990/yr · Save ₹2,398',
+    price: { monthly: '₹999', annual: '₹699' },
+    annualNote: '₹8,390/yr · Save ₹3,598',
     tagline: 'Scale your business fast',
     color: '#22C55E',
     popular: false,
@@ -60,20 +60,32 @@ const FEATURES: FeatureRow[] = [
   { label: 'Facebook posts (2 versions)', category: 'Core', free: true, starter: true, growth: true },
   { label: 'Google Business description', category: 'Core', free: true, starter: true, growth: true },
   { label: 'WhatsApp direct share button', category: 'Core', free: true, starter: true, growth: true },
+  { label: 'Hashtag Pack (industry-specific)', category: 'Core', free: true, starter: true, growth: true },
+  { label: 'AI Marketing Assistant (chat)', category: 'Core', free: true, starter: true, growth: true },
   // Languages
   { label: 'Languages available', category: 'Languages', free: '4 (Hindi, Telugu, Tamil, English)', starter: 'All 7', growth: 'All 7' },
   { label: 'Marathi, Kannada, Bengali', category: 'Languages', free: false, starter: true, growth: true },
   // Poster & flyer
-  { label: 'Poster templates', category: 'Poster', free: '3 basic', starter: 'All 9 templates', growth: 'All 9 templates' },
-  { label: 'Festive, Modern, Elegant, Nature themes', category: 'Poster', free: false, starter: true, growth: true },
-  { label: 'Special offer / price list on poster', category: 'Poster', free: false, starter: true, growth: true },
-  { label: 'QR code (WhatsApp scan-to-chat)', category: 'Poster', free: false, starter: true, growth: true },
-  { label: 'Animated poster preview', category: 'Poster', free: false, starter: true, growth: true },
-  { label: 'PNG poster download (3× resolution)', category: 'Poster', free: true, starter: true, growth: true },
-  { label: 'PDF flyer export (print-ready)', category: 'Poster', free: false, starter: true, growth: true },
-  { label: 'Business logo on poster', category: 'Poster', free: false, starter: false, growth: true },
+  { label: 'Poster templates', category: 'Poster & Flyer', free: '3 basic', starter: 'All 9 templates', growth: 'All 9 templates' },
+  { label: 'Festive, Modern, Elegant, Nature themes', category: 'Poster & Flyer', free: false, starter: true, growth: true },
+  { label: 'Special offer / price list on poster', category: 'Poster & Flyer', free: false, starter: true, growth: true },
+  { label: 'QR code (WhatsApp scan-to-chat)', category: 'Poster & Flyer', free: false, starter: true, growth: true },
+  { label: 'Animated poster preview', category: 'Poster & Flyer', free: false, starter: true, growth: true },
+  { label: 'PNG poster download (3× resolution)', category: 'Poster & Flyer', free: true, starter: true, growth: true },
+  { label: 'PDF flyer export (print-ready)', category: 'Poster & Flyer', free: false, starter: true, growth: true },
+  { label: 'Business logo on poster', category: 'Poster & Flyer', free: false, starter: false, growth: true },
+  // AI Creative Tools
+  { label: 'Caption Optimizer (AI A/B testing)', category: 'AI Creative Tools', free: false, starter: true, growth: true },
+  { label: 'Business Card Generator (download PNG)', category: 'AI Creative Tools', free: false, starter: true, growth: true },
+  { label: 'Video / Reel Creator', category: 'AI Creative Tools', free: false, starter: '4 styles', growth: 'All 8 styles' },
+  { label: 'Premium reel styles (Neon, Particle, Glamour, Impact)', category: 'AI Creative Tools', free: false, starter: false, growth: true },
+  // Marketing & Scheduling
+  { label: 'Festival Planner (60-day calendar)', category: 'Marketing & Scheduling', free: false, starter: true, growth: true },
+  { label: 'Smart Calendar (post reminders)', category: 'Marketing & Scheduling', free: false, starter: true, growth: true },
+  { label: 'Marketing Agent (campaign generator)', category: 'Marketing & Scheduling', free: false, starter: true, growth: true },
+  { label: 'Auto-publish to Instagram & Facebook', category: 'Marketing & Scheduling', free: false, starter: true, growth: true },
+  { label: 'Auto-publish to LinkedIn & Twitter/X', category: 'Marketing & Scheduling', free: false, starter: true, growth: true },
   // Business management
-  { label: 'Schedule reminders', category: 'Management', free: false, starter: true, growth: true },
   { label: 'Generation history (re-open any promo)', category: 'Management', free: false, starter: true, growth: true },
   { label: 'Save business profiles', category: 'Management', free: false, starter: 'Up to 3', growth: 'Unlimited' },
   { label: 'Load saved business into form', category: 'Management', free: false, starter: true, growth: true },
@@ -83,7 +95,7 @@ const FEATURES: FeatureRow[] = [
   { label: 'Referral rewards (earn free generations)', category: 'Growth Tools', free: false, starter: false, growth: true },
 ];
 
-const CATEGORIES = ['Core', 'Languages', 'Poster', 'Management', 'Growth Tools'];
+const CATEGORIES = ['Core', 'Languages', 'Poster & Flyer', 'AI Creative Tools', 'Marketing & Scheduling', 'Management', 'Growth Tools'];
 
 function Check({ value, planColor }: { value: FeatureValue; planColor: string }) {
   if (value === false) return (
@@ -127,7 +139,7 @@ export default function Pricing() {
             </span>
           </h2>
           <p className="text-lg mb-8" style={{ color: 'rgba(255,255,255,0.5)' }}>
-            Less than a cup of chai per day. Cancel anytime.
+            Videos, cards, auto-publishing, AI chat — all for less than ₹17/day. Cancel anytime.
           </p>
 
           {/* Billing toggle */}
@@ -184,12 +196,12 @@ export default function Pricing() {
               {/* Plan highlights */}
               <div className="space-y-2.5 mb-8 flex-1">
                 {plan.key === 'free' && [
-                  '3 generations / month',
+                  '3 AI generations / month',
                   'Hindi, Telugu, Tamil, English',
-                  '3 poster templates',
-                  'WhatsApp + Instagram + Facebook',
-                  'Google Business description',
-                  'PNG download',
+                  '3 poster templates + PNG download',
+                  'WhatsApp · Instagram · Facebook · Google',
+                  'Hashtag Pack (industry-specific)',
+                  'AI Marketing Assistant (chat)',
                 ].map(f => (
                   <div key={f} className="flex items-center gap-2.5 text-sm" style={{ color: 'rgba(255,255,255,0.65)' }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ color: plan.color, flexShrink: 0 }}>
@@ -201,14 +213,15 @@ export default function Pricing() {
                 {plan.key === 'starter' && [
                   'Unlimited generations',
                   'All 7 Indian languages',
-                  'All 9 poster templates',
-                  'Special offer / price list',
-                  'QR code on poster',
-                  'PDF flyer export',
-                  'Animated poster preview',
+                  'All 9 poster templates + PDF export',
+                  'QR code + animated poster preview',
+                  'Caption Optimizer (AI A/B testing)',
+                  'Business Card Generator',
+                  'Video / Reel Creator (4 styles)',
+                  'Festival Planner + Smart Calendar',
+                  'Marketing Agent (campaign generator)',
+                  'Auto-publish to social media',
                   'Save up to 3 businesses',
-                  'Generation history (50 entries)',
-                  'Schedule post reminders',
                 ].map(f => (
                   <div key={f} className="flex items-center gap-2.5 text-sm" style={{ color: 'rgba(255,255,255,0.65)' }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ color: plan.color, flexShrink: 0 }}>
@@ -219,8 +232,9 @@ export default function Pricing() {
                 ))}
                 {plan.key === 'growth' && [
                   'Everything in Starter',
+                  'All 8 Video / Reel styles (premium)',
                   'Business logo on poster',
-                  'WhatsApp broadcast list',
+                  'WhatsApp broadcast contact list',
                   'Customer contact collection page',
                   'Referral rewards (earn free gens)',
                   'Unlimited saved businesses',
