@@ -52,6 +52,7 @@ const NAV_ITEMS = [
   { id: 'overview',     label: 'Overview',       icon: '⚡' },
   { id: 'businesses',   label: 'My Businesses',  icon: '🏪' },
   { id: 'generations',  label: 'History',        icon: '🕐' },
+  { id: 'analytics',    label: 'Analytics',      icon: '📊' },
   { id: 'settings',     label: 'Settings',       icon: '⚙️' },
 ]
 
@@ -162,6 +163,108 @@ function ToolsGrid({ plan }: { plan: string }) {
             </Link>
           )
         })}
+      </div>
+    </section>
+  )
+}
+
+function AnalyticsView({ generations, businesses }: { generations: Generation[]; businesses: Business[] }) {
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date()
+    d.setDate(d.getDate() - (6 - i))
+    return d
+  })
+  const byDay = days.map(d => {
+    const dateStr = d.toISOString().split('T')[0]
+    const count = generations.filter(g => g.created_at.startsWith(dateStr)).length
+    return { label: d.toLocaleDateString('en-IN', { weekday: 'short' }), count }
+  })
+  const maxCount = Math.max(...byDay.map(d => d.count), 1)
+
+  const langCounts: Record<string, number> = {}
+  businesses.forEach(b => { langCounts[b.language] = (langCounts[b.language] ?? 0) + 1 })
+  const langs = Object.entries(langCounts).sort((a, b) => b[1] - a[1])
+  const typeCount: Record<string, number> = {}
+  businesses.forEach(b => { typeCount[b.type] = (typeCount[b.type] ?? 0) + 1 })
+  const types = Object.entries(typeCount).sort((a, b) => b[1] - a[1])
+
+  return (
+    <section>
+      <h2 className="text-lg font-bold text-white mb-6">📊 Analytics</h2>
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        {[
+          { val: generations.length, label: 'Total Generations' },
+          { val: businesses.length, label: 'Businesses Saved' },
+          { val: Object.keys(langCounts).length || '—', label: 'Languages Used' },
+        ].map(s => (
+          <div key={s.label} className="rounded-2xl p-5" style={{ background: '#111', border: '1px solid rgba(255,255,255,0.07)' }}>
+            <p className="text-2xl font-black text-white">{s.val}</p>
+            <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* 7-day bar chart */}
+      <div className="rounded-2xl p-6 mb-6" style={{ background: '#111', border: '1px solid rgba(255,255,255,0.07)' }}>
+        <h3 className="text-sm font-bold text-white mb-5">Generations — Last 7 Days</h3>
+        <div className="flex items-end gap-2 sm:gap-3" style={{ height: '120px' }}>
+          {byDay.map((d, i) => (
+            <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
+              <span className="text-[10px] font-semibold" style={{ color: d.count > 0 ? '#FF6B1A' : 'transparent' }}>{d.count}</span>
+              <div className="w-full rounded-t-lg" style={{
+                height: `${Math.max((d.count / maxCount) * 80, d.count > 0 ? 8 : 2)}px`,
+                background: d.count > 0 ? 'linear-gradient(180deg, #FF6B1A, #FF9500)' : 'rgba(255,255,255,0.06)',
+                transition: 'height 0.4s ease',
+              }} />
+              <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>{d.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid sm:grid-cols-2 gap-6 mb-6">
+        {langs.length > 0 && (
+          <div className="rounded-2xl p-6" style={{ background: '#111', border: '1px solid rgba(255,255,255,0.07)' }}>
+            <h3 className="text-sm font-bold text-white mb-4">By Language</h3>
+            <div className="space-y-3">
+              {langs.map(([lang, count]) => (
+                <div key={lang}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-white/60">{lang}</span>
+                    <span className="text-xs font-semibold" style={{ color: '#FF6B1A' }}>{count}</span>
+                  </div>
+                  <div className="h-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                    <div className="h-full rounded-full" style={{ width: `${(count / langs[0][1]) * 100}%`, background: 'linear-gradient(90deg, #FF6B1A, #FF9500)' }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {types.length > 0 && (
+          <div className="rounded-2xl p-6" style={{ background: '#111', border: '1px solid rgba(255,255,255,0.07)' }}>
+            <h3 className="text-sm font-bold text-white mb-4">By Business Type</h3>
+            <div className="space-y-3">
+              {types.slice(0, 5).map(([type, count]) => (
+                <div key={type}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-white/60">{type}</span>
+                    <span className="text-xs font-semibold" style={{ color: '#6366F1' }}>{count}</span>
+                  </div>
+                  <div className="h-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                    <div className="h-full rounded-full" style={{ width: `${(count / types[0][1]) * 100}%`, background: 'linear-gradient(90deg, #6366F1, #818CF8)' }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-2xl p-5" style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.2)' }}>
+        <p className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>
+          <strong className="text-white/80">Tip:</strong> Use the Marketing Agent to auto-schedule posts — publishing history will appear here.
+        </p>
       </div>
     </section>
   )
@@ -590,6 +693,11 @@ export default function DashboardClient({ user, profile, businesses, generations
               </div>
             )}
           </section>
+        )}
+
+        {/* Analytics tab */}
+        {activeTab === 'analytics' && (
+          <AnalyticsView generations={generations} businesses={businesses} />
         )}
 
         {/* Settings tab */}

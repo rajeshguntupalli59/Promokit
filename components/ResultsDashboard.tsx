@@ -91,40 +91,182 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-function MessageCard({ text, index, showShare }: { text: string; index: number; showShare?: boolean }) {
+const WA_ICON = (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+  </svg>
+)
+
+function MessageCard({ text, index, showShare, whatsappNum }: {
+  text: string; index: number; showShare?: boolean; whatsappNum?: string
+}) {
+  const [showNumInput, setShowNumInput] = useState(false)
+  const [num, setNum] = useState(whatsappNum ? whatsappNum.replace(/\D/g, '') : '')
+
+  function sendToNum() {
+    const clean = num.replace(/\D/g, '')
+    const phone = clean.startsWith('91') ? clean : `91${clean}`
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank')
+  }
+
   return (
-    <div
-      className="rounded-xl p-5 group"
-      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
-    >
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <span
-          className="text-xs font-semibold px-2 py-0.5 rounded"
-          style={{ background: 'rgba(255,107,26,0.12)', color: '#FF6B1A' }}
-        >
+    <div className="rounded-xl p-5" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <span className="text-xs font-semibold px-2 py-0.5 rounded" style={{ background: 'rgba(255,107,26,0.12)', color: '#FF6B1A' }}>
           Version {index + 1}
         </span>
-        <div className="flex items-center gap-2">
-          {showShare && (
+        <CopyButton text={text} />
+      </div>
+      <p className="text-sm text-white/80 leading-relaxed whitespace-pre-wrap mb-4">{text}</p>
+      {showShare && (
+        <div className="space-y-2">
+          <div className="flex gap-2">
             <a
               href={`https://wa.me/?text=${encodeURIComponent(text)}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200"
-              style={{ background: 'rgba(37,211,102,0.12)', color: '#25D366', border: '1px solid rgba(37,211,102,0.25)' }}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all duration-200"
+              style={{ background: 'rgba(37,211,102,0.15)', color: '#25D366', border: '1px solid rgba(37,211,102,0.3)' }}
             >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-              </svg>
-              Share
+              {WA_ICON}
+              Send on WhatsApp
             </a>
+            <button
+              onClick={() => setShowNumInput(o => !o)}
+              title="Send to a specific number"
+              className="px-3.5 py-2.5 rounded-xl text-sm transition-all duration-200"
+              style={showNumInput
+                ? { background: 'rgba(37,211,102,0.15)', color: '#25D366', border: '1px solid rgba(37,211,102,0.3)' }
+                : { background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.1)' }}
+            >
+              📱
+            </button>
+          </div>
+          {showNumInput && (
+            <div className="flex gap-2">
+              <input
+                value={num}
+                onChange={e => setNum(e.target.value)}
+                placeholder="Customer number: 98765 43210"
+                className="form-input flex-1"
+                style={{ fontSize: '13px', padding: '8px 12px' }}
+              />
+              <button
+                onClick={sendToNum}
+                disabled={num.replace(/\D/g, '').length < 10}
+                className="px-4 py-2 rounded-xl text-xs font-bold flex-shrink-0 transition-all"
+                style={num.replace(/\D/g, '').length >= 10
+                  ? { background: 'rgba(37,211,102,0.15)', color: '#25D366', border: '1px solid rgba(37,211,102,0.3)' }
+                  : { background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.07)' }}
+              >
+                Send →
+              </button>
+            </div>
           )}
-          <CopyButton text={text} />
         </div>
-      </div>
-      <p className="text-sm text-white/80 leading-relaxed whitespace-pre-wrap">{text}</p>
+      )}
     </div>
   );
+}
+
+const REVIEW_MSGS: Record<string, (n: string) => string> = {
+  Hindi:   n => `नमस्ते! 🙏 ${n} में आपका स्वागत है। अगर आपको हमारी सेवा अच्छी लगी तो कृपया Google पर एक रिव्यू जरूर दें — इससे हमें बहुत मदद मिलेगी। ⭐ धन्यवाद!`,
+  Telugu:  n => `నమస్తే! 🙏 ${n}లో మీకు సేవ చేయడం మాకు సంతోషం. దయచేసి Google-లో ఒక రివ్యూ ఇవ్వండి — మీ అభిప్రాయం మాకు చాలా విలువైనది. ⭐ ధన్యవాదాలు!`,
+  Tamil:   n => `வணக்கம்! 🙏 ${n}-ல் உங்களுக்கு சேவை செய்வதில் மகிழ்ச்சி. தயவுசெய்து Google-ல் ஒரு மதிப்பீடு கொடுங்கள் — இது எங்களுக்கு மிகவும் உதவியாக இருக்கும். ⭐ நன்றி!`,
+  Marathi: n => `नमस्कार! 🙏 ${n}मध्ये आपली सेवा करणे आमच्यासाठी आनंदाचे आहे. कृपया Google वर रिव्यू द्या — आपला अभिप्राय आम्हाला खूप महत्त्वाचा आहे. ⭐ आभारी आहे!`,
+  Kannada: n => `ನಮಸ್ಕಾರ! 🙏 ${n}ನಲ್ಲಿ ನಿಮಗೆ ಸೇವೆ ಮಾಡಲು ನಮಗೆ ಸಂತೋಷ. ದಯವಿಟ್ಟು Google-ನಲ್ಲಿ ರಿವ್ಯೂ ನೀಡಿ — ಇದು ನಮಗೆ ತುಂಬಾ ಸಹಾಯವಾಗುತ್ತದೆ. ⭐ ಧನ್ಯವಾದ!`,
+  Bengali: n => `নমস্কার! 🙏 ${n}-এ আপনাকে সেবা দিতে পেরে আমরা খুশি। দয়া করে Google-এ একটি রিভিউ দিন — আপনার মতামত আমাদের কাছে অমূল্য। ⭐ ধন্যবাদ!`,
+  English: n => `Hi! 🙏 Thank you for visiting ${n}. If you enjoyed our service, we'd truly appreciate a quick Google review — it helps us serve you better! ⭐ Thank you!`,
+}
+
+function ReviewRequestCard({ businessName, language, whatsappNum }: {
+  businessName: string; language: string; whatsappNum?: string
+}) {
+  const [open, setOpen] = useState(false)
+  const [num, setNum] = useState(whatsappNum ? whatsappNum.replace(/\D/g, '') : '')
+  const [copied, setCopied] = useState(false)
+
+  const msgFn = REVIEW_MSGS[language] ?? REVIEW_MSGS.English
+  const msg = msgFn(businessName)
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="w-full flex items-center justify-between px-4 py-3.5 rounded-xl transition-all mt-4"
+        style={{ background: 'rgba(255,215,0,0.06)', border: '1px solid rgba(255,215,0,0.2)' }}
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-xl">⭐</span>
+          <div className="text-left">
+            <p className="text-sm font-bold" style={{ color: '#FFD700' }}>Request Google Reviews</p>
+            <p className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>Send a review request to customers via WhatsApp</p>
+          </div>
+        </div>
+        <span className="text-sm" style={{ color: 'rgba(255,255,255,0.3)' }}>→</span>
+      </button>
+    )
+  }
+
+  return (
+    <div className="rounded-xl p-5 mt-4" style={{ background: 'rgba(255,215,0,0.04)', border: '1px solid rgba(255,215,0,0.2)' }}>
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-sm font-bold text-white">⭐ Review Request — {language}</p>
+        <button onClick={() => setOpen(false)} className="text-white/30 hover:text-white/60 text-lg leading-none">✕</button>
+      </div>
+      <div className="rounded-xl p-4 mb-4" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+        <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.8)' }}>{msg}</p>
+      </div>
+      <div className="flex gap-2 mb-2">
+        <a
+          href={`https://wa.me/?text=${encodeURIComponent(msg)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold"
+          style={{ background: 'rgba(37,211,102,0.15)', color: '#25D366', border: '1px solid rgba(37,211,102,0.3)' }}
+        >
+          {WA_ICON}
+          Send via WhatsApp
+        </a>
+        <button
+          onClick={async () => {
+            await navigator.clipboard.writeText(msg)
+            setCopied(true)
+            setTimeout(() => setCopied(false), 2000)
+          }}
+          className="px-4 py-2.5 rounded-xl text-sm font-bold transition-all"
+          style={copied
+            ? { background: 'rgba(34,197,94,0.15)', color: '#22C55E', border: '1px solid rgba(34,197,94,0.3)' }
+            : { background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.1)' }}
+        >
+          {copied ? '✓ Copied' : 'Copy'}
+        </button>
+      </div>
+      <div className="flex gap-2">
+        <input
+          value={num}
+          onChange={e => setNum(e.target.value)}
+          placeholder="Customer number: 98765 43210"
+          className="form-input flex-1"
+          style={{ fontSize: '13px', padding: '8px 12px' }}
+        />
+        <button
+          onClick={() => {
+            const clean = num.replace(/\D/g, '')
+            const phone = clean.startsWith('91') ? clean : `91${clean}`
+            window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank')
+          }}
+          disabled={num.replace(/\D/g, '').length < 10}
+          className="px-4 py-2 rounded-xl text-xs font-bold flex-shrink-0 transition-all"
+          style={num.replace(/\D/g, '').length >= 10
+            ? { background: 'rgba(37,211,102,0.15)', color: '#25D366', border: '1px solid rgba(37,211,102,0.3)' }
+            : { background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.2)' }}
+        >
+          Send →
+        </button>
+      </div>
+    </div>
+  )
 }
 
 type Reminder = { id: string; title: string; date: string; content: string }
@@ -477,7 +619,7 @@ export default function ResultsDashboard() {
           <div className="space-y-4">
             {(data.whatsapp || []).map((msg, i) => (
               <div key={i}>
-                <MessageCard text={msg} index={i} showShare />
+                <MessageCard text={msg} index={i} showShare whatsappNum={business.whatsapp} />
                 <div className="flex justify-end mt-1.5">
                   <button
                     onClick={() => setReminderContent(msg)}
@@ -489,6 +631,11 @@ export default function ResultsDashboard() {
                 </div>
               </div>
             ))}
+            <ReviewRequestCard
+              businessName={business.businessName}
+              language={business.language}
+              whatsappNum={business.whatsapp}
+            />
           </div>
         );
       case 'Instagram':

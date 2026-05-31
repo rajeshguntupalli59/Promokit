@@ -3,6 +3,40 @@
 import { useState, FormEvent, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
+const VOICE_LANG: Record<string, string> = {
+  Hindi: 'hi-IN', Telugu: 'te-IN', Tamil: 'ta-IN', English: 'en-IN',
+  Marathi: 'mr-IN', Kannada: 'kn-IN', Bengali: 'bn-IN',
+}
+
+function useSpeech(lang: string, onResult: (text: string) => void) {
+  const [listening, setListening] = useState(false)
+  const recRef = useRef<unknown>(null)
+
+  function toggle() {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SR) { alert('Voice input not supported in this browser. Try Chrome.'); return }
+    if (listening) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ;(recRef.current as any)?.stop()
+      return
+    }
+    const rec = new SR()
+    rec.lang = VOICE_LANG[lang] ?? 'hi-IN'
+    rec.interimResults = false
+    rec.maxAlternatives = 1
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    rec.onresult = (e: any) => onResult(e.results[0][0].transcript)
+    rec.onend = () => setListening(false)
+    rec.onerror = () => setListening(false)
+    recRef.current = rec
+    rec.start()
+    setListening(true)
+  }
+
+  return { listening, toggle }
+}
+
 type PriceItem = { name: string; price: string; original: string };
 
 type FormData = {
@@ -69,6 +103,40 @@ const TONES = [
   { value: 'Professional', icon: '💼', desc: 'Clean, trustworthy, brand-focused' },
   { value: 'Festive & Energetic', icon: '🎉', desc: 'High energy, celebratory, exciting offers' },
 ];
+
+function VoiceDescriptionField({ value, language, onChange }: {
+  value: string; language: string; onChange: (v: string) => void
+}) {
+  const { listening, toggle } = useSpeech(language, (text) =>
+    onChange(value ? `${value} ${text}` : text)
+  )
+  return (
+    <>
+      <div className="flex items-center justify-between mb-1">
+        <label className="form-label" style={{ marginBottom: 0 }}>What do you sell / offer? *</label>
+        <button type="button" onClick={toggle}
+          className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg transition-all"
+          style={listening
+            ? { background: 'rgba(239,68,68,0.15)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.3)' }
+            : { background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.45)', border: '1px solid rgba(255,255,255,0.1)' }}>
+          {listening ? (
+            <><span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />Recording…</>
+          ) : (
+            <><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1 17.93V21H9v2h6v-2h-2v-2.07A8 8 0 0 0 20 11h-2a6 6 0 0 1-12 0H4a8 8 0 0 0 7 7.93z"/></svg>Speak in {language}</>
+          )}
+        </button>
+      </div>
+      <textarea
+        className="form-input"
+        style={{ minHeight: '100px', resize: 'vertical' }}
+        placeholder="Fresh vegetables, groceries, dairy products, household items, spices..."
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        required
+      />
+    </>
+  )
+}
 
 export default function BusinessForm() {
   const router = useRouter();
@@ -299,14 +367,10 @@ export default function BusinessForm() {
                   </select>
                 </div>
                 <div>
-                  <label className="form-label">What do you sell / offer? *</label>
-                  <textarea
-                    className="form-input"
-                    style={{ minHeight: '100px', resize: 'vertical' }}
-                    placeholder="Fresh vegetables, groceries, dairy products, household items, spices..."
+                  <VoiceDescriptionField
                     value={form.description}
-                    onChange={(e) => set('description', e.target.value)}
-                    required
+                    language={form.language}
+                    onChange={(v) => set('description', v)}
                   />
                 </div>
                 <div>
