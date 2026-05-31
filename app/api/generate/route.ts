@@ -1,8 +1,23 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { FRAMEWORKS, TONE_STYLES, LANGUAGE_INSTRUCTIONS, buildSystemPrompt } from '@/lib/copywriting-frameworks'
+import { headers } from 'next/headers'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+
+// IP rate limiter: 5 requests/hour for unauthenticated, 30/hour for authenticated
+const limiter = new Map<string, { count: number; resetAt: number }>()
+function checkRateLimit(key: string, max: number): boolean {
+  const now = Date.now()
+  const entry = limiter.get(key)
+  if (!entry || now > entry.resetAt) {
+    limiter.set(key, { count: 1, resetAt: now + 3_600_000 })
+    return true
+  }
+  if (entry.count >= max) return false
+  entry.count++
+  return true
+}
 
 const PLAN_LIMITS: Record<string, number> = {
   free: 3,
@@ -36,6 +51,14 @@ export async function POST(req: Request) {
           return Response.json({ error: 'limit_reached', plan: profile.plan }, { status: 402 })
         }
       }
+    }
+
+    // Rate limit: 30/hr for auth users, 5/hr for guests (keyed by IP)
+    const ip = (await headers()).get('x-forwarded-for')?.split(',')[0].trim() ?? 'unknown'
+    const rlKey = user ? `user:${user.id}` : `ip:${ip}`
+    const rlMax = user ? 30 : 5
+    if (!checkRateLimit(rlKey, rlMax)) {
+      return Response.json({ error: 'Too many requests. Please try again in an hour.' }, { status: 429 })
     }
 
     const data = await req.json()

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import VideoCreator from './VideoCreator';
 import BusinessCardGenerator from './BusinessCardGenerator';
 import CaptionOptimizer from './CaptionOptimizer';
@@ -21,12 +22,15 @@ type PriceItem = { name: string; price: string; original: string };
 type ResultPayload = {
   success: boolean;
   data: GeneratedData;
+  plan?: string;
   business: {
     businessName: string;
     businessType: string;
+    description?: string;
     location: string;
     whatsapp: string;
     language: string;
+    tone?: string;
     logoUrl?: string;
     offerEnabled?: boolean;
     offerOccasion?: string;
@@ -269,6 +273,112 @@ function ReviewRequestCard({ businessName, language, whatsappNum }: {
   )
 }
 
+type BroadcastContact = { id: string; name: string; phone: string }
+
+function BroadcastSend({ messages }: { messages: string[] }) {
+  const [open, setOpen] = useState(false)
+  const [contacts, setContacts] = useState<BroadcastContact[]>([])
+  const [selectedMsg, setSelectedMsg] = useState(0)
+  const [loading, setLoading] = useState(false)
+
+  async function loadContacts() {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/broadcast/contacts')
+      if (res.ok) {
+        const j = await res.json()
+        setContacts(j.contacts ?? [])
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function openPanel() {
+    setOpen(true)
+    loadContacts()
+  }
+
+  function sendToAll() {
+    const msg = messages[selectedMsg] ?? messages[0] ?? ''
+    for (const c of contacts) {
+      const clean = c.phone.replace(/\D/g, '').replace(/^0+/, '')
+      const phone = clean.startsWith('91') ? clean : `91${clean}`
+      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank')
+    }
+  }
+
+  if (!open) {
+    return (
+      <button
+        onClick={openPanel}
+        className="w-full flex items-center justify-between px-4 py-3.5 rounded-xl transition-all mt-4"
+        style={{ background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.25)' }}
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-xl">📢</span>
+          <div className="text-left">
+            <p className="text-sm font-bold" style={{ color: '#818CF8' }}>Send to Broadcast List</p>
+            <p className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>Open WhatsApp for each saved contact</p>
+          </div>
+        </div>
+        <span className="text-xs font-bold px-2 py-0.5 rounded" style={{ background: 'rgba(99,102,241,0.2)', color: '#818CF8' }}>Growth</span>
+      </button>
+    )
+  }
+
+  return (
+    <div className="rounded-xl p-5 mt-4" style={{ background: 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.25)' }}>
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm font-bold text-white">📢 Broadcast to Contacts</p>
+        <button onClick={() => setOpen(false)} className="text-white/30 hover:text-white/60 text-lg leading-none">✕</button>
+      </div>
+
+      {loading ? (
+        <p className="text-xs text-white/40 text-center py-4">Loading contacts…</p>
+      ) : contacts.length === 0 ? (
+        <div className="text-center py-4">
+          <p className="text-xs text-white/40 mb-2">No contacts saved yet</p>
+          <a href="/broadcast" className="text-xs font-semibold" style={{ color: '#818CF8' }}>
+            Add contacts in Broadcast →
+          </a>
+        </div>
+      ) : (
+        <>
+          <div className="mb-3">
+            <label className="text-xs font-semibold text-white/50 block mb-1.5">Select message</label>
+            <div className="space-y-2">
+              {messages.map((m, i) => (
+                <button
+                  key={i}
+                  onClick={() => setSelectedMsg(i)}
+                  className="w-full text-left px-3 py-2 rounded-lg text-xs transition-all"
+                  style={selectedMsg === i
+                    ? { background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.4)', color: '#c7d2fe' }
+                    : { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.5)' }}
+                >
+                  {m.slice(0, 80)}…
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs text-white/40">{contacts.length} contacts</span>
+            <span className="text-xs text-white/30">Opens WhatsApp per contact</span>
+          </div>
+          <button
+            onClick={sendToAll}
+            className="w-full py-2.5 rounded-xl text-sm font-bold transition-all"
+            style={{ background: 'rgba(99,102,241,0.2)', color: '#818CF8', border: '1px solid rgba(99,102,241,0.4)' }}
+          >
+            Send to All {contacts.length} Contacts →
+          </button>
+        </>
+      )}
+    </div>
+  )
+}
+
 type Reminder = { id: string; title: string; date: string; content: string }
 
 function ReminderModal({ content, onClose }: { content: string; onClose: () => void }) {
@@ -482,6 +592,7 @@ function UpgradeGate({ label, requiredPlan = 'starter', children }: { label: str
 }
 
 export default function ResultsDashboard() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>('WhatsApp');
   const [result, setResult] = useState<ResultPayload | null>(null);
   const [plan, setPlan] = useState<string>('free');
@@ -490,6 +601,7 @@ export default function ResultsDashboard() {
   const [downloading, setDownloading] = useState(false);
   const [animated, setAnimated] = useState(false);
   const [reminderContent, setReminderContent] = useState<string | null>(null);
+  const [regenerating, setRegenerating] = useState(false);
   const flyerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -509,6 +621,48 @@ export default function ResultsDashboard() {
 
   const isPaid = plan === 'starter' || plan === 'growth';
   const isGrowth = plan === 'growth';
+
+  async function regenerate() {
+    if (!result || regenerating) return;
+    setRegenerating(true);
+    try {
+      const biz = result.business;
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessName: biz.businessName,
+          businessType: biz.businessType,
+          description: biz.description ?? biz.businessType,
+          location: biz.location,
+          whatsapp: biz.whatsapp,
+          language: biz.language,
+          tone: biz.tone ?? 'Friendly & Warm',
+          festivals: false,
+          offerEnabled: biz.offerEnabled ?? false,
+          offerOccasion: biz.offerOccasion ?? '',
+          offerBadge: biz.offerBadge ?? '',
+          offerValidTill: biz.offerValidTill ?? '',
+          offerItems: biz.offerItems ?? [],
+          logoUrl: biz.logoUrl ?? '',
+        }),
+      });
+      const json = await res.json();
+      if (res.ok) {
+        localStorage.setItem('promokit_result', JSON.stringify(json));
+        localStorage.setItem('promokit_plan', json.plan ?? 'free');
+        setResult(json);
+        setPlan(json.plan ?? 'free');
+        setActiveTab('WhatsApp');
+      } else if (res.status === 402) {
+        router.push('/dashboard');
+      } else {
+        alert(json.error ?? 'Regeneration failed. Please try again.');
+      }
+    } finally {
+      setRegenerating(false);
+    }
+  }
 
   function buildPosterParams(extra?: Record<string, string>) {
     if (!result) return new URLSearchParams();
@@ -636,6 +790,7 @@ export default function ResultsDashboard() {
               language={business.language}
               whatsappNum={business.whatsapp}
             />
+            {isGrowth && <BroadcastSend messages={data.whatsapp || []} />}
           </div>
         );
       case 'Instagram':
@@ -1106,12 +1261,13 @@ export default function ResultsDashboard() {
             >
               🔗 Share Link
             </button>
-            <Link
-              href="/create"
+            <button
+              onClick={regenerate}
+              disabled={regenerating}
               className="btn-ghost inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold"
             >
-              🔄 Regenerate
-            </Link>
+              {regenerating ? '⏳ Regenerating…' : '🔄 Regenerate'}
+            </button>
           </div>
         </div>
 

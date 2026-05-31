@@ -2,8 +2,8 @@ import Razorpay from 'razorpay'
 import { createClient } from '@/lib/supabase/server'
 
 const PLANS = {
-  starter: { amount: 29900, name: 'PromoKit Starter' },
-  growth:  { amount: 69900, name: 'PromoKit Growth' },
+  starter: { amount: 49900, name: 'PromoKit Starter' },
+  growth:  { amount: 99900, name: 'PromoKit Growth' },
 }
 
 export async function POST(req: Request) {

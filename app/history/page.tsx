@@ -9,7 +9,7 @@ export default async function HistoryPage() {
 
   const { data: generations } = await supabase
     .from('generations')
-    .select('id, business_name, content, created_at')
+    .select('id, business_name, content, created_at, businesses(type, location, whatsapp, language, logo_url)')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
     .limit(50)

@@ -4,11 +4,20 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
+type BusinessRef = {
+  type: string
+  location: string
+  whatsapp: string
+  language: string
+  logo_url: string | null
+}
+
 type Generation = {
   id: string
   business_name: string
   content: Record<string, unknown>
   created_at: string
+  businesses?: BusinessRef | null
 }
 
 function timeAgo(date: string) {
@@ -25,19 +34,61 @@ function timeAgo(date: string) {
 export default function HistoryClient({ generations }: { generations: Generation[] }) {
   const router = useRouter()
   const [search, setSearch] = useState('')
+  const [regeneratingId, setRegeneratingId] = useState<string | null>(null)
 
   const filtered = generations.filter(g =>
     g.business_name.toLowerCase().includes(search.toLowerCase())
   )
 
   function loadGeneration(gen: Generation) {
+    const biz = gen.businesses
     const payload = {
       success: true,
       data: gen.content,
-      business: { businessName: gen.business_name, businessType: '', location: '', whatsapp: '', language: 'English' },
+      business: {
+        businessName: gen.business_name,
+        businessType: biz?.type ?? '',
+        location: biz?.location ?? '',
+        whatsapp: biz?.whatsapp ?? '',
+        language: biz?.language ?? 'English',
+        logoUrl: biz?.logo_url ?? '',
+      },
     }
     localStorage.setItem('promokit_result', JSON.stringify(payload))
     router.push('/results')
+  }
+
+  async function regenerateGeneration(e: React.MouseEvent, gen: Generation) {
+    e.stopPropagation()
+    if (regeneratingId) return
+    setRegeneratingId(gen.id)
+    try {
+      const biz = gen.businesses
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessName: gen.business_name,
+          businessType: biz?.type ?? 'General Store',
+          description: biz?.type ?? 'Quality products and services',
+          location: biz?.location ?? '',
+          whatsapp: biz?.whatsapp ?? '',
+          language: biz?.language ?? 'English',
+          tone: 'Friendly & Warm',
+          festivals: false,
+        }),
+      })
+      const json = await res.json()
+      if (res.ok) {
+        localStorage.setItem('promokit_result', JSON.stringify(json))
+        localStorage.setItem('promokit_plan', json.plan ?? 'free')
+        router.push('/results')
+      } else {
+        alert(json.error ?? 'Regeneration failed')
+      }
+    } finally {
+      setRegeneratingId(null)
+    }
   }
 
   return (
@@ -101,10 +152,18 @@ export default function HistoryClient({ generations }: { generations: Generation
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 flex-shrink-0">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       <span className="text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
                         {timeAgo(gen.created_at)}
                       </span>
+                      <button
+                        onClick={(e) => regenerateGeneration(e, gen)}
+                        disabled={regeneratingId === gen.id}
+                        className="text-xs font-semibold px-2.5 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                        style={{ background: 'rgba(99,102,241,0.15)', color: '#818CF8' }}
+                      >
+                        {regeneratingId === gen.id ? '⏳' : '↻ New'}
+                      </button>
                       <span
                         className="text-xs font-semibold px-2.5 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
                         style={{ background: 'rgba(255,107,26,0.15)', color: '#FF6B1A' }}
