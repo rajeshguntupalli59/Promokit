@@ -104,7 +104,7 @@ function MessageCard({ text, index, showShare, whatsappNum }: {
   const [num, setNum] = useState(whatsappNum ? whatsappNum.replace(/\D/g, '') : '')
 
   function sendToNum() {
-    const clean = num.replace(/\D/g, '')
+    const clean = num.replace(/\D/g, '').replace(/^0+/, '')
     const phone = clean.startsWith('91') ? clean : `91${clean}`
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank')
   }
@@ -252,7 +252,7 @@ function ReviewRequestCard({ businessName, language, whatsappNum }: {
         />
         <button
           onClick={() => {
-            const clean = num.replace(/\D/g, '')
+            const clean = num.replace(/\D/g, '').replace(/^0+/, '')
             const phone = clean.startsWith('91') ? clean : `91${clean}`
             window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank')
           }}
