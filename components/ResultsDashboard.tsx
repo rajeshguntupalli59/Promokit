@@ -22,12 +22,15 @@ type PriceItem = { name: string; price: string; original: string };
 type ResultPayload = {
   success: boolean;
   data: GeneratedData;
+  plan?: string;
   business: {
     businessName: string;
     businessType: string;
+    description?: string;
     location: string;
     whatsapp: string;
     language: string;
+    tone?: string;
     logoUrl?: string;
     offerEnabled?: boolean;
     offerOccasion?: string;
@@ -630,11 +633,11 @@ export default function ResultsDashboard() {
         body: JSON.stringify({
           businessName: biz.businessName,
           businessType: biz.businessType,
-          description: (result as ResultPayload & { description?: string }).description ?? biz.businessType,
+          description: biz.description ?? biz.businessType,
           location: biz.location,
           whatsapp: biz.whatsapp,
           language: biz.language,
-          tone: (result as ResultPayload & { tone?: string }).tone ?? 'Friendly & Warm',
+          tone: biz.tone ?? 'Friendly & Warm',
           festivals: false,
           offerEnabled: biz.offerEnabled ?? false,
           offerOccasion: biz.offerOccasion ?? '',
