@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import RazorpayButton from './RazorpayButton'
 import FestivalPlanner from '../FestivalPlanner'
+import FestiveBanner from '../FestiveBanner'
 
 type Profile = {
   id: string
@@ -456,7 +457,7 @@ export default function DashboardClient({ user, profile, businesses, generations
             <div className="flex-shrink-0 w-48">
               <RazorpayButton
                 plan="starter"
-                label="Upgrade Now →"
+                label="Pay via UPI / Card →"
                 onSuccess={() => setUpgradeSuccess(true)}
               />
             </div>
@@ -520,6 +521,7 @@ export default function DashboardClient({ user, profile, businesses, generations
         {/* Command Centre */}
         {activeTab === 'overview' && (
           <>
+            <FestiveBanner />
             <OnboardingChecklist generations={generations.length} />
             <ToolsGrid plan={plan} />
           </>
@@ -793,7 +795,7 @@ export default function DashboardClient({ user, profile, businesses, generations
                       </ul>
                       <RazorpayButton
                         plan={tier.plan}
-                        label={`Upgrade to ${tier.name} →`}
+                        label={`Pay via UPI / Card — ${tier.name} →`}
                         onSuccess={() => setUpgradeSuccess(true)}
                       />
                     </div>

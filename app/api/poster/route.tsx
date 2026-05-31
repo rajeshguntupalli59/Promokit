@@ -1,28 +1,33 @@
 import { ImageResponse } from 'next/og'
 import { NextRequest } from 'next/server'
+import fs from 'fs'
+import path from 'path'
 
 export const runtime = 'nodejs'
 
 // ── Font cache (persists in worker across requests) ──────────────────────────
 const fontCache = new Map<string, ArrayBuffer>()
 
-async function loadGoogleFont(family: string, weight: number): Promise<ArrayBuffer | null> {
+const LOCAL_FONTS: Record<string, Record<number, string>> = {
+  'Poppins': { 700: 'Poppins-Bold.ttf', 900: 'Poppins-Black.ttf' },
+  'Noto Sans Devanagari': { 700: 'NotoSansDevanagari-Bold.ttf' },
+  'Noto Sans Telugu': { 700: 'NotoSansTelugu-Bold.ttf' },
+  'Noto Sans Tamil': { 700: 'NotoSansTamil-Bold.ttf' },
+  'Noto Sans Kannada': { 700: 'NotoSansKannada-Bold.ttf' },
+  'Noto Sans Bengali': { 700: 'NotoSansBengali-Bold.ttf' },
+}
+
+function loadLocalFont(family: string, weight: number): ArrayBuffer | null {
   const key = `${family}-${weight}`
   if (fontCache.has(key)) return fontCache.get(key)!
   try {
-    // No Chrome UA — Google Fonts returns TTF which Satori supports (woff2 is not supported)
-    const css = await fetch(
-      `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:wght@${weight}`
-    ).then(r => r.text())
-    const match = css.match(/src: url\(([^)]+)\) format\('truetype'\)/) ||
-                  css.match(/url\(([^)]+\.ttf)\)/)
-    if (!match) return null
-    const data = await fetch(match[1]).then(r => r.arrayBuffer())
-    fontCache.set(key, data)
-    return data
-  } catch {
-    return null
-  }
+    const fileName = LOCAL_FONTS[family]?.[weight]
+    if (!fileName) return null
+    const buf = fs.readFileSync(path.join(process.cwd(), 'public/fonts', fileName))
+    const ab = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer
+    fontCache.set(key, ab)
+    return ab
+  } catch { return null }
 }
 
 // ── Template definitions ─────────────────────────────────────────────────────
@@ -145,10 +150,10 @@ export async function GET(req: NextRequest) {
   const waLink = whatsapp ? `https://wa.me/${whatsapp.replace(/\D/g, '')}` : ''
   const qrApiUrl = showQr ? `${req.nextUrl.origin}/api/qr?url=${encodeURIComponent(waLink)}` : ''
 
-  const [poppins700, poppins900, localFont700, qrData, logoData] = await Promise.all([
-    loadGoogleFont('Poppins', 700),
-    loadGoogleFont('Poppins', 900),
-    fontFamily ? loadGoogleFont(fontFamily, 700) : Promise.resolve(null),
+  const poppins700 = loadLocalFont('Poppins', 700)
+  const poppins900 = loadLocalFont('Poppins', 900)
+  const localFont700 = fontFamily ? loadLocalFont(fontFamily, 700) : null
+  const [qrData, logoData] = await Promise.all([
     qrApiUrl ? fetchBase64(qrApiUrl) : Promise.resolve(null),
     logoUrl ? fetchBase64(logoUrl) : Promise.resolve(null),
   ])
