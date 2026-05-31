@@ -10,12 +10,12 @@ async function loadGoogleFont(family: string, weight: number): Promise<ArrayBuff
   const key = `${family}-${weight}`
   if (fontCache.has(key)) return fontCache.get(key)!
   try {
+    // No Chrome UA — Google Fonts returns TTF which Satori supports (woff2 is not supported)
     const css = await fetch(
-      `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:wght@${weight}`,
-      { headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' } }
+      `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:wght@${weight}`
     ).then(r => r.text())
-    const match = css.match(/src: url\(([^)]+)\) format\('woff2'\)/) ||
-                  css.match(/url\(([^)]+\.woff2)\)/)
+    const match = css.match(/src: url\(([^)]+)\) format\('truetype'\)/) ||
+                  css.match(/url\(([^)]+\.ttf)\)/)
     if (!match) return null
     const data = await fetch(match[1]).then(r => r.arrayBuffer())
     fontCache.set(key, data)

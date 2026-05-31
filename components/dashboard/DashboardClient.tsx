@@ -168,7 +168,7 @@ function ToolsGrid({ plan }: { plan: string }) {
   )
 }
 
-function AnalyticsView({ generations, businesses }: { generations: Generation[]; businesses: Business[] }) {
+function AnalyticsView({ generations, businesses, thisMonth }: { generations: Generation[]; businesses: Business[]; thisMonth: number }) {
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date()
     d.setDate(d.getDate() - (6 - i))
@@ -193,7 +193,7 @@ function AnalyticsView({ generations, businesses }: { generations: Generation[];
       <h2 className="text-lg font-bold text-white mb-6">📊 Analytics</h2>
       <div className="grid grid-cols-3 gap-4 mb-6">
         {[
-          { val: generations.length, label: 'Total Generations' },
+          { val: thisMonth, label: 'This Month' },
           { val: businesses.length, label: 'Businesses Saved' },
           { val: Object.keys(langCounts).length || '—', label: 'Languages Used' },
         ].map(s => (
@@ -697,7 +697,7 @@ export default function DashboardClient({ user, profile, businesses, generations
 
         {/* Analytics tab */}
         {activeTab === 'analytics' && (
-          <AnalyticsView generations={generations} businesses={businesses} />
+          <AnalyticsView generations={generations} businesses={businesses} thisMonth={profile?.generations_this_month ?? 0} />
         )}
 
         {/* Settings tab */}

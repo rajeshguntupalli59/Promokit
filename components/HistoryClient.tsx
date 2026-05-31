@@ -4,11 +4,20 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
+type BusinessRef = {
+  type: string
+  location: string
+  whatsapp: string
+  language: string
+  logo_url: string | null
+}
+
 type Generation = {
   id: string
   business_name: string
   content: Record<string, unknown>
   created_at: string
+  businesses?: BusinessRef | null
 }
 
 function timeAgo(date: string) {
@@ -31,10 +40,18 @@ export default function HistoryClient({ generations }: { generations: Generation
   )
 
   function loadGeneration(gen: Generation) {
+    const biz = gen.businesses
     const payload = {
       success: true,
       data: gen.content,
-      business: { businessName: gen.business_name, businessType: '', location: '', whatsapp: '', language: 'English' },
+      business: {
+        businessName: gen.business_name,
+        businessType: biz?.type ?? '',
+        location: biz?.location ?? '',
+        whatsapp: biz?.whatsapp ?? '',
+        language: biz?.language ?? 'English',
+        logoUrl: biz?.logo_url ?? '',
+      },
     }
     localStorage.setItem('promokit_result', JSON.stringify(payload))
     router.push('/results')
