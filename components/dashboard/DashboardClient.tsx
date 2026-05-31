@@ -49,13 +49,27 @@ interface Props {
 const PLAN_LIMIT: Record<string, number> = { free: 3, starter: 999999, growth: 999999 }
 
 const NAV_ITEMS = [
-  { id: 'overview', label: 'Overview', icon: '📊' },
-  { id: 'businesses', label: 'My Businesses', icon: '🏪' },
-  { id: 'generations', label: 'Generations', icon: '📝' },
-  { id: 'history', label: 'History', icon: '🕐', href: '/history', minPlan: 'starter' },
-  { id: 'schedule', label: 'Schedule', icon: '📅', href: '/schedule', minPlan: 'starter' },
-  { id: 'broadcast', label: 'Broadcast', icon: '📣', href: '/broadcast', minPlan: 'growth' },
-  { id: 'settings', label: 'Settings', icon: '⚙️' },
+  { id: 'overview',     label: 'Overview',       icon: '⚡' },
+  { id: 'businesses',   label: 'My Businesses',  icon: '🏪' },
+  { id: 'generations',  label: 'History',        icon: '🕐' },
+  { id: 'settings',     label: 'Settings',       icon: '⚙️' },
+]
+
+const NAV_LINKS = [
+  { label: 'Smart Calendar',   icon: '📅', href: '/schedule',   minPlan: 'starter' },
+  { label: 'Marketing Agent',  icon: '🤖', href: '/market',     minPlan: 'starter' },
+  { label: 'Broadcast',        icon: '📣', href: '/broadcast',  minPlan: 'growth'  },
+]
+
+const TOOLS = [
+  { icon: '🎨', label: 'Generate Content',   desc: 'WhatsApp · Instagram · Poster', href: '/create',   minPlan: 'free',    color: '#FF6B1A' },
+  { icon: '🎬', label: 'Video / Reel',        desc: '8 animated styles',             href: '/create',   minPlan: 'starter', color: '#A855F7' },
+  { icon: '🪪', label: 'Business Card',       desc: '4 premium designs',             href: '/create',   minPlan: 'starter', color: '#3B82F6' },
+  { icon: '🧠', label: 'Caption Optimizer',   desc: 'AI A/B test 5 tones',           href: '/create',   minPlan: 'starter', color: '#22C55E' },
+  { icon: '#️⃣', label: 'Hashtag Pack',        desc: 'Industry-specific sets',        href: '/create',   minPlan: 'free',    color: '#EC4899' },
+  { icon: '🎉', label: 'Festival Planner',    desc: '60-day promo calendar',         href: '/schedule', minPlan: 'starter', color: '#F59E0B' },
+  { icon: '🤖', label: 'Marketing Agent',     desc: 'Full campaign generator',       href: '/market',   minPlan: 'starter', color: '#6366F1' },
+  { icon: '📅', label: 'Auto-Schedule',       desc: 'Post to 4 platforms',           href: '/market',   minPlan: 'starter', color: '#14B8A6' },
 ]
 
 function timeAgo(date: string) {
@@ -65,6 +79,92 @@ function timeAgo(date: string) {
   const hrs = Math.floor(mins / 60)
   if (hrs < 24) return `${hrs}h ago`
   return `${Math.floor(hrs / 24)}d ago`
+}
+
+const CHECKLIST = [
+  { key: 'generated',  label: 'Generate your first promo',    href: '/create'   },
+  { key: 'video',      label: 'Try the Video / Reel creator', href: '/create'   },
+  { key: 'scheduled',  label: 'Schedule a social media post', href: '/market'   },
+  { key: 'agent',      label: 'Run the Marketing Agent',      href: '/market'   },
+  { key: 'referred',   label: 'Invite a friend (referral)',   href: '/dashboard#settings' },
+]
+
+function OnboardingChecklist({ generations }: { generations: number }) {
+  const [done, setDone] = useState<Record<string, boolean>>({})
+  useEffect(() => {
+    try { setDone(JSON.parse(localStorage.getItem('promokit_checklist') ?? '{}')) } catch { /* */ }
+  }, [])
+  const allDone = CHECKLIST.every(c => done[c.key] || (c.key === 'generated' && generations > 0))
+  if (allDone) return null
+  return (
+    <div className="rounded-2xl p-5 mb-8" style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.2)' }}>
+      <p className="text-sm font-black text-white mb-4">🚀 Get started — {CHECKLIST.filter(c => done[c.key] || (c.key === 'generated' && generations > 0)).length} / {CHECKLIST.length} done</p>
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+        {CHECKLIST.map(c => {
+          const isDone = done[c.key] || (c.key === 'generated' && generations > 0)
+          return (
+            <Link key={c.key} href={c.href}
+              onClick={() => {
+                const next = { ...done, [c.key]: true }
+                setDone(next)
+                localStorage.setItem('promokit_checklist', JSON.stringify(next))
+              }}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all"
+              style={isDone
+                ? { background: 'rgba(34,197,94,0.08)', color: 'rgba(255,255,255,0.4)', textDecoration: 'line-through' }
+                : { background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.07)' }}>
+              <span className="flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[10px]"
+                style={isDone ? { background: 'rgba(34,197,94,0.3)', color: '#22C55E' } : { background: 'rgba(255,255,255,0.1)' }}>
+                {isDone ? '✓' : ''}
+              </span>
+              {c.label}
+            </Link>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function ToolsGrid({ plan }: { plan: string }) {
+  const canAccess = (minPlan: string) => {
+    if (minPlan === 'free') return true
+    if (minPlan === 'starter') return plan !== 'free'
+    return plan === 'growth'
+  }
+  return (
+    <section className="mb-10">
+      <h2 className="text-base font-black text-white mb-4">All Tools</h2>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {TOOLS.map(t => {
+          const locked = !canAccess(t.minPlan)
+          return (
+            <Link key={t.label} href={locked ? '/#pricing' : t.href}
+              className="group rounded-2xl p-4 flex flex-col gap-2 transition-all duration-200 relative overflow-hidden"
+              style={locked
+                ? { background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', opacity: 0.55 }
+                : { background: '#111', border: `1px solid rgba(255,255,255,0.07)` }}>
+              {/* Glow on hover */}
+              {!locked && <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl pointer-events-none" style={{ background: `radial-gradient(circle at 30% 30%, ${t.color}15, transparent 70%)` }} />}
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0 relative"
+                style={{ background: locked ? 'rgba(255,255,255,0.06)' : `${t.color}18`, border: `1px solid ${locked ? 'rgba(255,255,255,0.06)' : t.color + '30'}` }}>
+                {t.icon}
+              </div>
+              <div className="relative">
+                <p className="text-sm font-bold text-white leading-tight">{t.label}</p>
+                <p className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>{t.desc}</p>
+              </div>
+              {locked && (
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded self-start" style={{ background: 'rgba(255,107,26,0.15)', color: '#FF6B1A' }}>
+                  {t.minPlan === 'growth' ? 'Growth' : 'Starter'}
+                </span>
+              )}
+            </Link>
+          )
+        })}
+      </div>
+    </section>
+  )
 }
 
 function PlanBadge({ plan }: { plan: string }) {
@@ -148,38 +248,32 @@ export default function DashboardClient({ user, profile, businesses, generations
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
-          {NAV_ITEMS.map(item => {
-            const itemLocked = item.minPlan === 'growth' ? plan !== 'growth' : item.minPlan === 'starter' ? plan === 'free' : false
-            return item.href ? (
-              <Link
-                key={item.id}
-                href={itemLocked ? '/#pricing' : item.href}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-left transition-all duration-150"
-                style={{ color: itemLocked ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.55)', border: '1px solid transparent' }}
-              >
+        <nav className="flex-1 px-3 py-4 flex flex-col gap-1 overflow-y-auto">
+          {NAV_ITEMS.map(item => (
+            <button key={item.id} onClick={() => setActiveTab(item.id)}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-left transition-all duration-150"
+              style={{
+                background: activeTab === item.id ? 'rgba(255,107,26,0.12)' : 'transparent',
+                color: activeTab === item.id ? '#FF6B1A' : 'rgba(255,255,255,0.55)',
+                border: activeTab === item.id ? '1px solid rgba(255,107,26,0.2)' : '1px solid transparent',
+              }}>
+              <span>{item.icon}</span>{item.label}
+            </button>
+          ))}
+
+          <div className="mt-4 mb-1 px-3">
+            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.2)' }}>Quick Access</p>
+          </div>
+          {NAV_LINKS.map(item => {
+            const locked = item.minPlan === 'growth' ? plan !== 'growth' : plan === 'free'
+            return (
+              <Link key={item.label} href={locked ? '/#pricing' : item.href}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150"
+                style={{ color: locked ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.55)', border: '1px solid transparent' }}>
                 <span>{item.icon}</span>
                 <span className="flex-1">{item.label}</span>
-                {itemLocked && (
-                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: item.minPlan === 'growth' ? 'rgba(34,197,94,0.15)' : 'rgba(255,107,26,0.15)', color: item.minPlan === 'growth' ? '#22C55E' : '#FF6B1A' }}>
-                    {item.minPlan === 'growth' ? 'Growth' : 'Starter'}
-                  </span>
-                )}
+                {locked && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'rgba(255,107,26,0.15)', color: '#FF6B1A' }}>{item.minPlan === 'growth' ? 'Growth' : 'Starter'}</span>}
               </Link>
-            ) : (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-left transition-all duration-150"
-                style={{
-                  background: activeTab === item.id ? 'rgba(255,107,26,0.12)' : 'transparent',
-                  color: activeTab === item.id ? '#FF6B1A' : 'rgba(255,255,255,0.55)',
-                  border: activeTab === item.id ? '1px solid rgba(255,107,26,0.2)' : '1px solid transparent',
-                }}
-              >
-                <span>{item.icon}</span>
-                {item.label}
-              </button>
             )
           })}
         </nav>
@@ -247,7 +341,7 @@ export default function DashboardClient({ user, profile, businesses, generations
                 ⚡ You&apos;ve used {used} of 3 free generations this month
               </p>
               <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px' }}>
-                Upgrade to Starter for unlimited generations — ₹299/month
+                Upgrade to Starter for unlimited generations + all AI tools — ₹499/month
               </p>
             </div>
             <div className="flex-shrink-0 w-48">
@@ -313,6 +407,14 @@ export default function DashboardClient({ user, profile, businesses, generations
             </div>
           ))}
         </div>
+
+        {/* Command Centre */}
+        {activeTab === 'overview' && (
+          <>
+            <OnboardingChecklist generations={generations.length} />
+            <ToolsGrid plan={plan} />
+          </>
+        )}
 
         {/* My Businesses */}
         {(activeTab === 'overview' || activeTab === 'businesses') && (
@@ -556,8 +658,8 @@ export default function DashboardClient({ user, profile, businesses, generations
                 </p>
                 <div className="grid sm:grid-cols-2 gap-4">
                   {[
-                    { plan: 'starter' as const, name: 'Starter', price: '₹299/mo', perks: ['Unlimited generations', 'Save all businesses', 'All languages'] },
-                    { plan: 'growth' as const, name: 'Growth', price: '₹699/mo', perks: ['Everything in Starter', 'Priority AI', 'Custom branding'] },
+                    { plan: 'starter' as const, name: 'Starter', price: '₹499/mo', perks: ['Unlimited generations', 'Video · Card · Caption AI', 'Auto-publish scheduling'] },
+                    { plan: 'growth' as const, name: 'Growth', price: '₹999/mo', perks: ['Everything in Starter', 'All 8 reel styles', 'Broadcast + Referral rewards'] },
                   ].map(tier => (
                     <div
                       key={tier.plan}
