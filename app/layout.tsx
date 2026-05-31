@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import ChatWidget from '@/components/ChatWidget';
 
 export const metadata: Metadata = {
   title: 'PromoKit — AI Marketing for Indian Small Businesses',
@@ -24,6 +25,7 @@ export default function RootLayout({
       </head>
       <body className="grain-overlay bg-base text-white antialiased">
         {children}
+        <ChatWidget />
       </body>
     </html>
   );
