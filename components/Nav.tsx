@@ -143,10 +143,10 @@ export default function Nav() {
           }}
         >
           {[
-            { label: 'Features', href: '#features' },
-            { label: 'Pricing', href: '#pricing' },
-            { label: 'Languages', href: '#how-it-works' },
-            { label: 'Blog', href: '#' },
+            { label: 'Features', href: '/#features' },
+            { label: 'Pricing', href: '/#pricing' },
+            { label: 'Languages', href: '/#how-it-works' },
+            { label: '🤖 Market Agent', href: '/market' },
           ].map((l) => (
             <a
               key={l.label}

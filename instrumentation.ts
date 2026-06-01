@@ -19,4 +19,17 @@ export async function register() {
   })
 
   console.log('[cron] Scheduled publish-posts every 15 minutes')
+
+  // Pre-warm poster font cache so first real user request isn't slow
+  setTimeout(async () => {
+    try {
+      const res = await fetch(
+        `${appUrl}/api/poster?name=PromoKit&type=Business&tagline=Best+Deals&highlight=Quality+Service&template=saffron&language=English`
+      )
+      if (res.ok) console.log('[warmup] Poster fonts pre-loaded')
+      else console.warn('[warmup] Poster warm-up returned', res.status)
+    } catch (err) {
+      console.warn('[warmup] Poster warm-up failed (non-fatal):', err)
+    }
+  }, 8000)
 }

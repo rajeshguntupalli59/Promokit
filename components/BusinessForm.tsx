@@ -82,6 +82,18 @@ const BADGE_PRESETS = [
   'FREE Delivery', 'Special Price', 'Limited Time Offer',
 ];
 
+const CAMPAIGN_PACKS = [
+  { emoji: '🪔', label: 'Diwali',        occasion: 'Diwali',           badge: '20% OFF' },
+  { emoji: '🌙', label: 'Eid',           occasion: 'Eid',              badge: 'Special Price' },
+  { emoji: '🌈', label: 'Holi',          occasion: 'Holi',             badge: 'BUY 2 GET 1' },
+  { emoji: '🎆', label: 'New Year',      occasion: 'New Year',         badge: 'New Year Offer' },
+  { emoji: '🎺', label: 'Navratri',      occasion: 'Navratri',         badge: 'Festival Special' },
+  { emoji: '🌾', label: 'Pongal',        occasion: 'Pongal',           badge: 'Harvest Special' },
+  { emoji: '🇮🇳', label: 'Independence', occasion: 'Independence Day', badge: '15% OFF' },
+  { emoji: '🎄', label: 'Christmas',     occasion: 'Christmas',        badge: 'Xmas Special' },
+  { emoji: '🛍️', label: 'Weekend',       occasion: 'Weekend Sale',     badge: 'Weekend Deal' },
+]
+
 const BUSINESS_TYPES = [
   'Kirana Store', 'Restaurant', 'Salon', 'Clinic', 'Boutique',
   'Pharmacy', 'Electronics', 'Bakery', 'Gym', 'Tuition Centre', 'Other',
@@ -340,6 +352,37 @@ export default function BusinessForm() {
                   )}
                 </div>
               )}
+
+              {/* Seasonal campaign packs */}
+              <div className="mb-5">
+                <p className="text-xs font-semibold mb-2" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                  ⚡ Quick Campaign — tap to auto-fill offer
+                </p>
+                <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+                  {CAMPAIGN_PACKS.map(pack => (
+                    <button
+                      key={pack.label}
+                      type="button"
+                      onClick={() => setForm(prev => ({
+                        ...prev,
+                        offerEnabled: true,
+                        offerOccasion: pack.occasion,
+                        offerBadge: pack.badge,
+                        festivals: true,
+                      }))}
+                      className="flex-shrink-0 flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150"
+                      style={
+                        form.offerOccasion === pack.occasion && form.offerEnabled
+                          ? { background: 'rgba(255,215,0,0.18)', color: '#FFD700', border: '1px solid rgba(255,215,0,0.45)' }
+                          : { background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.08)' }
+                      }
+                    >
+                      <span className="text-base">{pack.emoji}</span>
+                      <span>{pack.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               <div className="space-y-5">
                 <div>

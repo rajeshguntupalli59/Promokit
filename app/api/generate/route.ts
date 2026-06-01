@@ -10,6 +10,12 @@ const PLAN_LIMITS: Record<string, number> = {
   growth: 999999,
 }
 
+const FREE_LANGUAGES = new Set(['Hindi', 'Telugu', 'Tamil', 'English'])
+
+function sanitize(val: unknown, maxLen = 400): string {
+  return String(val ?? '').replace(/<[^>]*>/g, '').trim().slice(0, maxLen)
+}
+
 export async function POST(req: Request) {
   try {
     const supabase = await createClient()
@@ -40,12 +46,25 @@ export async function POST(req: Request) {
 
     const data = await req.json()
     const {
-      businessName, businessType, description, location, whatsapp, language, tone, festivals,
+      businessName: rawName, businessType: rawType, description: rawDesc,
+      location: rawLocation, whatsapp: rawWhatsapp, language, tone, festivals,
       offerEnabled, offerOccasion, offerBadge, offerValidTill, offerItems,
     } = data
 
+    const businessName = sanitize(rawName, 100)
+    const businessType = sanitize(rawType, 60)
+    const description  = sanitize(rawDesc, 400)
+    const location     = sanitize(rawLocation, 100)
+    const whatsapp     = sanitize(rawWhatsapp, 20)
+
     if (!businessName || !businessType || !description) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 })
+    }
+
+    // Language plan gate — block before calling Claude
+    const userPlan = profile?.plan ?? 'free'
+    if (!FREE_LANGUAGES.has(language) && userPlan === 'free') {
+      return Response.json({ error: 'Language requires Starter plan', plan: 'free' }, { status: 402 })
     }
 
     const toneGuide = TONE_STYLES[tone as keyof typeof TONE_STYLES] ?? TONE_STYLES['Friendly & Warm']

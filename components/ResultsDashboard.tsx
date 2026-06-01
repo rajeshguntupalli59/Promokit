@@ -282,11 +282,22 @@ function ReminderModal({ content, onClose }: { content: string; onClose: () => v
     return () => document.removeEventListener('keydown', handler)
   }, [onClose])
 
-  function save() {
+  async function save() {
     if (!date) return
-    const reminders: Reminder[] = JSON.parse(localStorage.getItem('promokit_reminders') ?? '[]')
-    reminders.push({ id: Date.now().toString(), title: title || 'Post reminder', date, content })
-    localStorage.setItem('promokit_reminders', JSON.stringify(reminders))
+    const label = title || 'Post reminder'
+    try {
+      const res = await fetch('/api/reminders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: label, scheduled_at: new Date(date).toISOString(), content }),
+      })
+      if (!res.ok) throw new Error('not authed')
+    } catch {
+      // Fall back to localStorage when not logged in
+      const stored: Reminder[] = JSON.parse(localStorage.getItem('promokit_reminders') ?? '[]')
+      stored.push({ id: Date.now().toString(), title: label, date, content })
+      localStorage.setItem('promokit_reminders', JSON.stringify(stored))
+    }
     setSaved(true)
     setTimeout(onClose, 1200)
   }
@@ -496,12 +507,15 @@ export default function ResultsDashboard() {
   const [downloading, setDownloading] = useState(false);
   const [animated, setAnimated] = useState(false);
   const [reminderContent, setReminderContent] = useState<string | null>(null);
+  const [regenerating, setRegenerating] = useState(false);
   const flyerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem('promokit_result');
     const storedPlan = localStorage.getItem('promokit_plan') ?? 'free';
+    const storedTemplate = localStorage.getItem('promokit_template') as FlyerTemplate | null;
     setPlan(storedPlan);
+    if (storedTemplate && storedTemplate in FLYER_TEMPLATES) setFlyerTemplate(storedTemplate);
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
@@ -512,6 +526,30 @@ export default function ResultsDashboard() {
       }
     }
   }, []);
+
+  async function handleRegenerate() {
+    if (!result || regenerating) return;
+    setRegenerating(true);
+    try {
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(result.business),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        localStorage.setItem('promokit_result', JSON.stringify(json));
+        if (json.plan) localStorage.setItem('promokit_plan', json.plan);
+        setResult(json);
+        if (json.plan) setPlan(json.plan);
+        setActiveTab('WhatsApp');
+      }
+    } catch {
+      // silently fail — user can try again
+    } finally {
+      setRegenerating(false);
+    }
+  }
 
   const isPaid = plan === 'starter' || plan === 'growth';
   const isGrowth = plan === 'growth';
@@ -734,7 +772,7 @@ export default function ResultsDashboard() {
                 return (
                   <button
                     key={key}
-                    onClick={() => { if (!locked) setFlyerTemplate(key) }}
+                    onClick={() => { if (!locked) { setFlyerTemplate(key); localStorage.setItem('promokit_template', key); } }}
                     className="relative rounded-xl overflow-hidden transition-all duration-200 group"
                     style={{
                       aspectRatio: '3/4',
@@ -1104,19 +1142,32 @@ export default function ResultsDashboard() {
 
           <div className="flex flex-wrap justify-center gap-3 mt-5">
             <button
-              onClick={() => {
-                const url = window.location.href;
-                navigator.clipboard?.writeText(url);
-              }}
+              onClick={() => navigator.clipboard?.writeText(window.location.href)}
               className="btn-ghost inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold"
             >
               🔗 Share Link
+            </button>
+            <button
+              onClick={handleRegenerate}
+              disabled={regenerating}
+              className="btn-ghost inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold"
+              style={{ opacity: regenerating ? 0.6 : 1 }}
+            >
+              {regenerating ? (
+                <>
+                  <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M12 3a9 9 0 019 9" strokeLinecap="round"/>
+                    <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeOpacity="0.3"/>
+                  </svg>
+                  Regenerating…
+                </>
+              ) : '🔄 Regenerate'}
             </button>
             <Link
               href="/create"
               className="btn-ghost inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold"
             >
-              🔄 Regenerate
+              ✏️ Edit Details
             </Link>
           </div>
         </div>
