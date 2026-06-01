@@ -1,36 +1,35 @@
-import { createClient } from '@/lib/supabase/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/db'
 import { NextRequest } from 'next/server'
 
 export async function GET() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data } = await supabase
-    .from('broadcast_contacts')
-    .select('id, name, phone, created_at')
-    .eq('owner_id', user.id)
-    .order('created_at', { ascending: false })
+  const contacts = await prisma.broadcastContact.findMany({
+    where: { ownerId: session.user.id },
+    orderBy: { createdAt: 'desc' },
+    select: { id: true, name: true, phone: true, createdAt: true },
+  })
 
-  return Response.json({ contacts: data ?? [] })
+  return Response.json({ contacts: contacts.map(c => ({ ...c, created_at: c.createdAt.toISOString() })) })
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient()
   const { ownerId, name, phone } = await req.json()
-
   if (!ownerId || !phone) return Response.json({ error: 'Missing fields' }, { status: 400 })
   const clean = phone.replace(/\D/g, '')
   if (clean.length < 10) return Response.json({ error: 'Invalid phone number' }, { status: 400 })
 
-  // Verify ownerId is a real user to prevent spam to arbitrary UUIDs
-  const { data: ownerExists } = await supabase.from('profiles').select('id').eq('id', ownerId).single()
+  const ownerExists = await prisma.user.findUnique({ where: { id: ownerId }, select: { id: true } })
   if (!ownerExists) return Response.json({ error: 'Invalid collection link' }, { status: 400 })
 
-  const { error } = await supabase
-    .from('broadcast_contacts')
-    .upsert({ owner_id: ownerId, name: name?.trim() || null, phone: clean }, { onConflict: 'owner_id,phone' })
+  await prisma.broadcastContact.upsert({
+    where: { ownerId_phone: { ownerId, phone: clean } },
+    create: { ownerId, name: name?.trim() || null, phone: clean },
+    update: { name: name?.trim() || null },
+  })
 
-  if (error) return Response.json({ error: error.message }, { status: 500 })
   return Response.json({ ok: true })
 }

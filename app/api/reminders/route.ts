@@ -1,52 +1,48 @@
-import { createClient } from '@/lib/supabase/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/db'
 import { NextRequest } from 'next/server'
 
 export async function GET() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data } = await supabase
-    .from('reminders')
-    .select('id, title, scheduled_at, content, created_at')
-    .eq('user_id', user.id)
-    .order('scheduled_at', { ascending: true })
+  const reminders = await prisma.reminder.findMany({
+    where: { userId: session.user.id },
+    orderBy: { scheduledAt: 'asc' },
+    select: { id: true, title: true, scheduledAt: true, content: true, createdAt: true },
+  })
 
-  return Response.json({ reminders: data ?? [] })
+  return Response.json({
+    reminders: reminders.map(r => ({
+      id: r.id, title: r.title, content: r.content,
+      scheduled_at: r.scheduledAt.toISOString(),
+      created_at: r.createdAt.toISOString(),
+    })),
+  })
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { title, scheduled_at, content } = await req.json()
   if (!title || !scheduled_at) return Response.json({ error: 'Missing fields' }, { status: 400 })
 
-  const { data, error } = await supabase
-    .from('reminders')
-    .insert({ user_id: user.id, title, scheduled_at, content: content ?? '' })
-    .select()
-    .single()
+  const reminder = await prisma.reminder.create({
+    data: { userId: session.user.id, title, scheduledAt: new Date(scheduled_at), content: content ?? '' },
+  })
 
-  if (error) return Response.json({ error: error.message }, { status: 500 })
-  return Response.json({ reminder: data })
+  return Response.json({ reminder: { id: reminder.id, title: reminder.title, scheduled_at: reminder.scheduledAt.toISOString() } })
 }
 
 export async function DELETE(req: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await req.json()
   if (!id) return Response.json({ error: 'Missing id' }, { status: 400 })
 
-  const { error } = await supabase
-    .from('reminders')
-    .delete()
-    .eq('id', id)
-    .eq('user_id', user.id)
-
-  if (error) return Response.json({ error: error.message }, { status: 500 })
+  await prisma.reminder.deleteMany({ where: { id, userId: session.user.id } })
   return Response.json({ ok: true })
 }

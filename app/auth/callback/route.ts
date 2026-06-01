@@ -1,15 +1,8 @@
-import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
+// NextAuth handles OAuth callbacks at /api/auth/callback/[provider]
+// This route redirects any legacy links to the dashboard
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url)
-  const code = searchParams.get('code')
-  if (code) {
-    const supabase = await createClient()
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
-    if (error) {
-      return NextResponse.redirect(`${origin}/auth/login?error=${encodeURIComponent(error.message)}`)
-    }
-  }
+  const origin = new URL(request.url).origin
   return NextResponse.redirect(`${origin}/dashboard`)
 }

@@ -1,24 +1,43 @@
-import { createClient } from '@/lib/supabase/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/db'
 import { redirect } from 'next/navigation'
 import DashboardClient from '@/components/dashboard/DashboardClient'
 
 export default async function DashboardPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/login')
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) redirect('/auth/login')
 
-  const [{ data: profile }, { data: businesses }, { data: generations }] = await Promise.all([
-    supabase.from('profiles').select('*').eq('id', user.id).single(),
-    supabase.from('businesses').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
-    supabase.from('generations').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10),
+  const [user, businesses, generations] = await Promise.all([
+    prisma.user.findUnique({ where: { id: session.user.id } }),
+    prisma.business.findMany({ where: { userId: session.user.id }, orderBy: { createdAt: 'desc' } }),
+    prisma.generation.findMany({ where: { userId: session.user.id }, orderBy: { createdAt: 'desc' }, take: 10 }),
   ])
 
-  return (
-    <DashboardClient
-      user={user}
-      profile={profile}
-      businesses={businesses || []}
-      generations={generations || []}
-    />
-  )
+  if (!user) redirect('/auth/login')
+
+  const profile = {
+    id: user.id,
+    email: user.email ?? '',
+    plan: user.plan,
+    generations_this_month: user.generationsThisMonth,
+    billing_period_start: user.billingPeriodStart.toISOString(),
+    referral_code: user.referralCode ?? undefined,
+    referral_credits: user.referralCredits,
+    created_at: user.createdAt.toISOString(),
+  }
+
+  const userForClient = { id: user.id, email: user.email ?? '', user_metadata: { full_name: user.name ?? undefined } }
+
+  const bizForClient = businesses.map(b => ({
+    id: b.id, name: b.name, type: b.type ?? '', description: b.description ?? '',
+    location: b.location ?? '', language: b.language, tone: b.tone, created_at: b.createdAt.toISOString(),
+  }))
+
+  const genForClient = generations.map(g => ({
+    id: g.id, business_name: g.businessName ?? '', content: g.content as Record<string, unknown>,
+    created_at: g.createdAt.toISOString(),
+  }))
+
+  return <DashboardClient user={userForClient} profile={profile} businesses={bizForClient} generations={genForClient} />
 }

@@ -1,19 +1,17 @@
-import { createClient } from '@/lib/supabase/server'
-import { NextRequest } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 
 export const runtime = 'nodejs'
 
-export async function POST(req: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+export async function POST(req: Request) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: profile } = await supabase.from('profiles').select('plan').eq('id', user.id).single()
-  if (profile?.plan !== 'growth') {
+  if (session.user.plan !== 'growth') {
     return Response.json({ error: 'Logo upload requires Growth plan' }, { status: 403 })
   }
 
-  const form = await req.formData()
+  const form = await (req as Request & { formData(): Promise<FormData> }).formData()
   const file = form.get('file') as File | null
   if (!file) return Response.json({ error: 'No file' }, { status: 400 })
 
@@ -22,10 +20,11 @@ export async function POST(req: NextRequest) {
   if (!allowed.includes(ext)) return Response.json({ error: 'Invalid file type' }, { status: 400 })
   if (file.size > 2 * 1024 * 1024) return Response.json({ error: 'File too large (max 2 MB)' }, { status: 400 })
 
-  const path = `${user.id}/${Date.now()}.${ext}`
-  const { error } = await supabase.storage.from('logos').upload(path, file, { upsert: true })
-  if (error) return Response.json({ error: error.message }, { status: 500 })
+  // Convert to base64 data URL — stored directly in the businesses table
+  const buffer = await file.arrayBuffer()
+  const base64 = Buffer.from(buffer).toString('base64')
+  const mimeType = file.type || `image/${ext}`
+  const dataUrl = `data:${mimeType};base64,${base64}`
 
-  const { data: { publicUrl } } = supabase.storage.from('logos').getPublicUrl(path)
-  return Response.json({ url: publicUrl })
+  return Response.json({ url: dataUrl })
 }

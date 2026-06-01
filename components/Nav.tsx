@@ -2,23 +2,18 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { useSession } from 'next-auth/react';
 
 export default function Nav() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { data: session } = useSession();
+  const isLoggedIn = !!session;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
-  useEffect(() => {
-    const supabase = createClient();
-    if (!supabase) return;
-    supabase.auth.getUser().then(({ data: { user } }: { data: { user: unknown } }) => setIsLoggedIn(!!user));
   }, []);
 
   return (

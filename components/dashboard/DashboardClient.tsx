@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
+import { signOut } from 'next-auth/react'
 import RazorpayButton from './RazorpayButton'
 import FestivalPlanner from '../FestivalPlanner'
 
@@ -317,9 +317,7 @@ export default function DashboardClient({ user, profile, businesses, generations
   const showUpgradeBanner = plan === 'free' && used >= 2
 
   async function handleSignOut() {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    router.push('/')
+    await signOut({ callbackUrl: '/' })
   }
 
   return (

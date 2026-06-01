@@ -1,18 +1,25 @@
-import { createClient } from '@/lib/supabase/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/db'
 import { redirect } from 'next/navigation'
 import HistoryClient from '@/components/HistoryClient'
 
 export default async function HistoryPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/login')
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) redirect('/auth/login')
 
-  const { data: generations } = await supabase
-    .from('generations')
-    .select('id, business_name, content, created_at')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
-    .limit(50)
+  const generations = await prisma.generation.findMany({
+    where: { userId: session.user.id },
+    orderBy: { createdAt: 'desc' },
+    take: 50,
+  })
 
-  return <HistoryClient generations={generations ?? []} />
+  const data = generations.map(g => ({
+    id: g.id,
+    business_name: g.businessName ?? '',
+    content: g.content as Record<string, unknown>,
+    created_at: g.createdAt.toISOString(),
+  }))
+
+  return <HistoryClient generations={data} />
 }

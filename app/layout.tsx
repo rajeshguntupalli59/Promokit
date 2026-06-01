@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import ChatWidget from '@/components/ChatWidget';
+import AuthProvider from '@/components/AuthProvider';
 
 export const metadata: Metadata = {
   title: 'PromoKit — AI Marketing for Indian Small Businesses',
@@ -24,8 +25,10 @@ export default function RootLayout({
         />
       </head>
       <body className="grain-overlay bg-base text-white antialiased">
-        {children}
-        <ChatWidget />
+        <AuthProvider>
+          {children}
+          <ChatWidget />
+        </AuthProvider>
       </body>
     </html>
   );

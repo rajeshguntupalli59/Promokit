@@ -1,17 +1,16 @@
 import crypto from 'crypto'
-import { createClient } from '@/lib/supabase/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/db'
 
 export async function POST(req: Request) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { razorpay_order_id, razorpay_payment_id, razorpay_signature, plan } = await req.json()
 
   const VALID_PLANS = ['starter', 'growth']
-  if (!VALID_PLANS.includes(plan)) {
-    return Response.json({ error: 'Invalid plan' }, { status: 400 })
-  }
+  if (!VALID_PLANS.includes(plan)) return Response.json({ error: 'Invalid plan' }, { status: 400 })
 
   const body = razorpay_order_id + '|' + razorpay_payment_id
   const expectedSignature = crypto
@@ -23,6 +22,6 @@ export async function POST(req: Request) {
     return Response.json({ error: 'Invalid signature' }, { status: 400 })
   }
 
-  await supabase.from('profiles').update({ plan }).eq('id', user.id)
+  await prisma.user.update({ where: { id: session.user.id }, data: { plan } })
   return Response.json({ success: true, plan })
 }

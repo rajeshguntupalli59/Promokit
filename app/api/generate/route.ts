@@ -1,5 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { createClient } from '@/lib/supabase/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/db'
 import { FRAMEWORKS, TONE_STYLES, LANGUAGE_INSTRUCTIONS, buildSystemPrompt } from '@/lib/copywriting-frameworks'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -18,28 +20,28 @@ function sanitize(val: unknown, maxLen = 400): string {
 
 export async function POST(req: Request) {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const session = await getServerSession(authOptions)
+    let dbUser = null
 
-    let profile = null
-    if (user) {
-      const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-      profile = data
+    if (session?.user?.id) {
+      dbUser = await prisma.user.findUnique({ where: { id: session.user.id } })
 
-      if (profile) {
+      if (dbUser) {
         const now = new Date()
-        const periodStart = profile.billing_period_start ? new Date(profile.billing_period_start) : new Date(0)
-        if (now.getMonth() !== periodStart.getMonth() || now.getFullYear() !== periodStart.getFullYear()) {
-          await supabase.from('profiles').update({
-            generations_this_month: 0,
-            billing_period_start: now.toISOString(),
-          }).eq('id', user.id)
-          profile.generations_this_month = 0
+        if (
+          now.getMonth() !== dbUser.billingPeriodStart.getMonth() ||
+          now.getFullYear() !== dbUser.billingPeriodStart.getFullYear()
+        ) {
+          await prisma.user.update({
+            where: { id: dbUser.id },
+            data: { generationsThisMonth: 0, billingPeriodStart: now },
+          })
+          dbUser.generationsThisMonth = 0
         }
 
-        const limit = PLAN_LIMITS[profile.plan] ?? 3
-        if (profile.generations_this_month >= limit) {
-          return Response.json({ error: 'limit_reached', plan: profile.plan }, { status: 402 })
+        const limit = PLAN_LIMITS[dbUser.plan] ?? 3
+        if (dbUser.generationsThisMonth >= limit) {
+          return Response.json({ error: 'limit_reached', plan: dbUser.plan }, { status: 402 })
         }
       }
     }
@@ -61,18 +63,15 @@ export async function POST(req: Request) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Language plan gate — block before calling Claude
-    const userPlan = profile?.plan ?? 'free'
+    const userPlan = dbUser?.plan ?? 'free'
     if (!FREE_LANGUAGES.has(language) && userPlan === 'free') {
       return Response.json({ error: 'Language requires Starter plan', plan: 'free' }, { status: 402 })
     }
 
     const toneGuide = TONE_STYLES[tone as keyof typeof TONE_STYLES] ?? TONE_STYLES['Friendly & Warm']
     const langGuide = LANGUAGE_INSTRUCTIONS[language] ?? LANGUAGE_INSTRUCTIONS['English']
-
     const systemPrompt = buildSystemPrompt()
 
-    // Build offer context string
     let offerContext = ''
     if (offerEnabled) {
       const lines: string[] = ['CURRENT PROMOTION:']
@@ -131,67 +130,49 @@ OUTPUT: Return ONLY valid JSON — no markdown fences, no explanation:
     const response = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 2000,
-      system: [
-        {
-          type: 'text',
-          text: systemPrompt,
-          // @ts-expect-error cache_control is valid per Anthropic SDK but not yet typed
-          cache_control: { type: 'ephemeral' },
-        },
-      ],
+      system: [{ type: 'text', text: systemPrompt, // @ts-expect-error cache_control valid
+        cache_control: { type: 'ephemeral' } }],
       messages: [{ role: 'user', content: userPrompt }],
     })
 
     const text = response.content[0].type === 'text' ? response.content[0].text : ''
     const jsonMatch = text.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) {
-      return Response.json({ error: 'Failed to parse AI response' }, { status: 500 })
-    }
+    if (!jsonMatch) return Response.json({ error: 'Failed to parse AI response' }, { status: 500 })
+
     const generated = JSON.parse(jsonMatch[0])
     const required = ['whatsapp', 'instagram', 'facebook', 'google', 'flyerTagline', 'flyerHighlight']
     for (const key of required) {
       if (!(key in generated)) return Response.json({ error: 'Incomplete AI response, please try again' }, { status: 500 })
     }
 
-    // Persist if authenticated
-    if (user && profile) {
-      const { data: biz } = await supabase.from('businesses').insert({
-        user_id: user.id,
-        name: businessName,
-        type: businessType,
-        description,
-        location: location || '',
-        whatsapp: whatsapp || '',
-        language,
-        tone,
-        festivals: festivals ?? false,
-      }).select().single()
+    if (session?.user?.id && dbUser) {
+      const biz = await prisma.business.create({
+        data: {
+          userId: dbUser.id, name: businessName, type: businessType, description,
+          location: location || '', whatsapp: whatsapp || '', language, tone, festivals: festivals ?? false,
+        },
+      })
 
       await Promise.all([
-        supabase.from('generations').insert({
-          user_id: user.id,
-          business_id: biz?.id ?? null,
-          business_name: businessName,
-          content: generated,
+        prisma.generation.create({
+          data: { userId: dbUser.id, businessId: biz.id, businessName, content: generated },
         }),
-        supabase.from('profiles').update({
-          generations_this_month: (profile.generations_this_month || 0) + 1,
-        }).eq('id', user.id),
+        prisma.user.update({
+          where: { id: dbUser.id },
+          data: { generationsThisMonth: dbUser.generationsThisMonth + 1 },
+        }),
       ])
     }
 
     return Response.json({
       success: true,
       data: generated,
-      plan: profile?.plan ?? 'free',
+      plan: dbUser?.plan ?? 'free',
       business: {
         businessName, businessType, description, location, whatsapp, language, tone,
-        offerEnabled: offerEnabled ?? false,
-        offerOccasion: offerOccasion ?? '',
-        offerBadge: offerBadge ?? '',
-        offerValidTill: offerValidTill ?? '',
-        offerItems: offerItems ?? [],
-        logoUrl: data.logoUrl ?? '',
+        offerEnabled: offerEnabled ?? false, offerOccasion: offerOccasion ?? '',
+        offerBadge: offerBadge ?? '', offerValidTill: offerValidTill ?? '',
+        offerItems: offerItems ?? [], logoUrl: data.logoUrl ?? '',
       },
     })
   } catch (err) {

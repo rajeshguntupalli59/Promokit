@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
@@ -14,17 +13,15 @@ export default function ForgotPasswordPage() {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const supabase = createClient()
-    const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset-password`,
+    const res = await fetch('/api/auth/forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
     })
-    if (err) {
-      setError(err.message)
-      setLoading(false)
-    } else {
-      setSent(true)
-      setLoading(false)
-    }
+    const json = await res.json()
+    if (!res.ok) { setError(json.error ?? 'Failed'); setLoading(false); return }
+    setSent(true)
+    setLoading(false)
   }
 
   return (
@@ -45,7 +42,7 @@ export default function ForgotPasswordPage() {
               </div>
               <h2 className="text-xl font-bold text-white mb-3">Check your email</h2>
               <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '15px', lineHeight: 1.6 }}>
-                We sent a reset link to <strong style={{ color: '#fff' }}>{email}</strong>.<br />It expires in 1 hour.
+                If <strong style={{ color: '#fff' }}>{email}</strong> is registered, a reset link has been sent. It expires in 1 hour.
               </p>
               <Link href="/auth/login" className="inline-block mt-6 text-sm font-semibold" style={{ color: '#FF6B1A' }}>Back to Sign In →</Link>
             </div>
@@ -55,9 +52,7 @@ export default function ForgotPasswordPage() {
                 <h1 className="text-2xl font-bold text-white mb-2">Reset password</h1>
                 <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '14px' }}>Enter your email and we&apos;ll send a reset link</p>
               </div>
-              {error && (
-                <div className="rounded-xl px-4 py-3 mb-5 text-sm font-medium" style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171' }}>{error}</div>
-              )}
+              {error && <div className="rounded-xl px-4 py-3 mb-5 text-sm font-medium" style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171' }}>{error}</div>}
               <form onSubmit={handleSubmit} className="flex flex-col gap-5">
                 <div>
                   <label className="form-label">Email address</label>
