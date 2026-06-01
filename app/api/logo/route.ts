@@ -8,6 +8,11 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const { data: profile } = await supabase.from('profiles').select('plan').eq('id', user.id).single()
+  if (profile?.plan !== 'growth') {
+    return Response.json({ error: 'Logo upload requires Growth plan' }, { status: 403 })
+  }
+
   const form = await req.formData()
   const file = form.get('file') as File | null
   if (!file) return Response.json({ error: 'No file' }, { status: 400 })

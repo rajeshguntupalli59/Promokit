@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev --port 3002",
     "build": "next build",
-    "start": "next start --port 3002"
+    "start": "next start"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.0",
@@ -15,6 +15,7 @@
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "next": "14.2.5",
+    "node-cron": "^4.2.1",
     "qrcode": "^1.5.4",
     "razorpay": "^2.9.6",
     "react": "^18.3.1",
@@ -22,6 +23,7 @@
   },
   "devDependencies": {
     "@types/node": "^20",
+    "@types/node-cron": "^3.0.11",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "autoprefixer": "^10.4.19",

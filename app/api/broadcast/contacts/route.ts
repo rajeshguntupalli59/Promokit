@@ -23,6 +23,10 @@ export async function POST(req: NextRequest) {
   const clean = phone.replace(/\D/g, '')
   if (clean.length < 10) return Response.json({ error: 'Invalid phone number' }, { status: 400 })
 
+  // Verify ownerId is a real user to prevent spam to arbitrary UUIDs
+  const { data: ownerExists } = await supabase.from('profiles').select('id').eq('id', ownerId).single()
+  if (!ownerExists) return Response.json({ error: 'Invalid collection link' }, { status: 400 })
+
   const { error } = await supabase
     .from('broadcast_contacts')
     .upsert({ owner_id: ownerId, name: name?.trim() || null, phone: clean }, { onConflict: 'owner_id,phone' })
