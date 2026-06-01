@@ -276,6 +276,12 @@ function ReminderModal({ content, onClose }: { content: string; onClose: () => v
   const [date, setDate] = useState('')
   const [saved, setSaved] = useState(false)
 
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [onClose])
+
   function save() {
     if (!date) return
     const reminders: Reminder[] = JSON.parse(localStorage.getItem('promokit_reminders') ?? '[]')
